@@ -1285,4 +1285,9 @@ app.get("/api/owner/status/:name",(req,res)=>{
   });
 });
 
-app.listen(PORT,"0.0.0.0",()=>console.log("🔥 Web aktif di http://localhost:"+PORT));
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log("🔥 Web aktif di port", PORT);
+});
+
+// 🔥 biar upload gak keputus di Railway
+server.timeout = 0;
