@@ -46,7 +46,55 @@
     "rating": 5,
     "ratingAvg": "5.0",
     "ratingCount": 2,
-    "comments": [],
+    "comments": [
+      {
+        "id": "1777357397130",
+        "name": "Jy",
+        "text": "Hi",
+        "userId": "u_1777267607001_tbz8297nh2",
+        "isAdmin": false,
+        "replies": [
+          {
+            "name": "ImSky2",
+            "role": "moderator",
+            "text": "Hi",
+            "comment": "Hi",
+            "at": "2026-04-28T09:27:52.802Z"
+          },
+          {
+            "name": "ImSky2",
+            "role": "moderator",
+            "text": "Hi",
+            "comment": "Hi",
+            "at": "2026-04-28T09:27:58.674Z"
+          }
+        ],
+        "createdAt": "2026-04-28T06:23:17.131Z",
+        "reply": {
+          "name": "ImSky2",
+          "role": "moderator",
+          "text": "Hi",
+          "comment": "Hi",
+          "at": "2026-04-28T09:27:58.674Z"
+        }
+      },
+      {
+        "name": "ImSky2",
+        "text": "↳ Hi",
+        "comment": "↳ Hi",
+        "isReply": true,
+        "role": "moderator",
+        "at": "2026-04-28T09:27:58.674Z"
+      },
+      {
+        "name": "ImSky2",
+        "text": "↳ Hi",
+        "comment": "↳ Hi",
+        "isReply": true,
+        "role": "moderator",
+        "at": "2026-04-28T09:27:52.806Z"
+      }
+    ],
     "createdAt": "2026-04-27T03:24:51.517Z",
     "viewedBy": {
       "u_1777198282986_pfiss67kih": true,
@@ -102,15 +150,31 @@
             "verified": true,
             "avatar": "/uploads/admin.png",
             "createdAt": "2026-04-27T03:19:10.897Z"
+          },
+          {
+            "name": "ImSky2",
+            "role": "moderator",
+            "text": "Hijuga",
+            "comment": "Hijuga",
+            "at": "2026-04-28T09:28:10.875Z"
           }
         ],
         "createdAt": "2026-04-26T16:45:54.577Z",
         "reply": {
           "name": "ImSky2",
           "role": "moderator",
-          "text": "Hi",
-          "at": "2026-04-28T00:26:44.710Z"
+          "text": "Hijuga",
+          "comment": "Hijuga",
+          "at": "2026-04-28T09:28:10.875Z"
         }
+      },
+      {
+        "name": "ImSky2",
+        "text": "↳ Hijuga",
+        "comment": "↳ Hijuga",
+        "isReply": true,
+        "role": "moderator",
+        "at": "2026-04-28T09:28:10.875Z"
       }
     ],
     "createdAt": "2026-04-26T10:40:14.414Z",

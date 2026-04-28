@@ -136,25 +136,33 @@ ${c.reply ? `
 }
 
 
+
 async function replyComment(postId,index){
   const inp=document.getElementById("reply_"+postId+"_"+index);
-  const reply=inp.value.trim();
-  if(!reply) return show("Isi reply");
+  const reply=inp ? inp.value.trim() : "";
+
+  if(!reply) return show("Isi reply dulu");
 
   const r=await fetch("/api/admin/comments/"+postId+"/"+index+"/reply",{
     method:"POST",
     headers:{
       "Content-Type":"application/json",
-      "x-admin-name":sessionStorage.getItem("mod_login")||""
+      "x-admin-name":sessionStorage.getItem("mod_login") || localStorage.getItem("mod_login") || "Moderator"
     },
     body:JSON.stringify({reply})
   });
 
-  if(!r.ok) return show("Gagal reply");
+  const d=await r.json().catch(()=>({}));
+
+  if(!r.ok){
+    return show(d.message || "Gagal reply");
+  }
 
   show("Reply terkirim");
+  inp.value="";
   loadComments();
 }
+
 
 async function deleteComment(postId,index){
   const r=await fetch("/api/admin/comment/"+postId+"/"+index,{

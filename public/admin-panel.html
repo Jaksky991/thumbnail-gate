@@ -21,7 +21,6 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
 .item img{width:90px;height:90px;object-fit:cover;border-radius:14px}
 .badge{display:inline-block;font-size:11px;border-radius:99px;padding:5px 8px;background:#1d9bf0;color:white;font-weight:900;margin:2px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:white;color:#ff3f9d;padding:12px 18px;border-radius:999px;box-shadow:0 10px 25px #0003;display:none;font-weight:900;z-index:99}
-@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}.item{grid-template-columns:75px 1fr}.item img{width:75px;height:75px}.row2{grid-template-columns:1fr 110px}}
 </style>
 </head>
 <body>
@@ -54,7 +53,7 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
   </select>
 
   <div class="row2">
-    <input id="upExpiredCustom" type="number" min="0" placeholder="Expired manual">
+    <input id="upExpiredCustom" type="number" placeholder="Expired manual">
     <select id="upExpiredUnit">
       <option value="hours">Jam</option>
       <option value="days">Hari</option>
@@ -62,21 +61,19 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
     </select>
   </div>
 
-  <input id="upKey" placeholder="Kunci VIP (opsional)">
+  <input id="upKey" placeholder="Kunci VIP">
 
   <select id="upExpired">
     <option value="">Tidak expired</option>
-    <option value="1">Expired 1 jam</option>
-    <option value="24">Expired 1 hari</option>
-    <option value="168">Expired 7 hari</option>
-    <option value="720">Expired 30 hari</option>
+    <option value="1">1 Jam</option>
+    <option value="24">1 Hari</option>
   </select>
 
   <p><b>Thumbnail:</b></p>
-  <input id="upThumb" type="file" accept="image/*">
+  <input id="upThumb" type="file">
 
-  <p><b>Video maksimal 9:</b></p>
-  <input id="upVideos" type="file" accept="video/*" multiple>
+  <p><b>Video:</b></p>
+  <input id="upVideos" type="file" multiple>
 
   <button onclick="uploadVideos()">Upload Sekarang</button>
 </div>
@@ -93,7 +90,15 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
 <script>
 const adminName=localStorage.getItem("admin_login");
 if(!adminName) location.href="/admin.html";
+
 document.getElementById("who").innerText="Login sebagai: "+adminName;
+
+let typing=false;
+
+document.querySelectorAll("input,textarea").forEach(el=>{
+  el.addEventListener("focus",()=>typing=true);
+  el.addEventListener("blur",()=>typing=false);
+});
 
 function show(msg){
   const t=document.getElementById("toast");
@@ -108,29 +113,40 @@ function logout(){
 }
 
 async function load(){
+  if(typing) return;
+
   const box=document.getElementById("posts");
-  const r=await fetch("/api/posts?t="+Date.now());
-  const data=await r.json().catch(()=>[]);
 
-  document.getElementById("totalPost").innerText=data.length;
-  document.getElementById("totalComment").innerText=data.reduce((a,p)=>a+(p.comments||[]).length,0);
-  document.getElementById("totalView").innerText=data.reduce((a,p)=>a+Number(p.views||0),0);
+  try{
+    const r=await fetch("/api/posts?t="+Date.now());
+    const data=await r.json();
 
-  box.innerHTML=data.map(p=>`
-    <div class="item">
-      <img src="${p.thumb||p.thumbnail||''}">
-      <div>
-        <b>${p.title||'Tanpa Judul'}</b><br>
-        <span class="badge">👁 ${p.views||0}</span>
-        <span class="badge">💬 ${(p.comments||[]).length}</span>
-        <span class="badge">⬇️ ${p.downloads||0}</span>
-        ${p.expiredAt ? `<span class="badge">⏳ ${new Date(p.expiredAt).toLocaleString()}</span>` : ""}
-        <br><br>
-        <button onclick="deletePost('${p.id}')">Hapus Video</button>
-        <button onclick="openUserPost('${p.id}')">Lihat</button>
+    document.getElementById("totalPost").innerText=data.length;
+    document.getElementById("totalComment").innerText=data.reduce((a,p)=>a+(p.comments||[]).length,0);
+    document.getElementById("totalView").innerText=data.reduce((a,p)=>a+Number(p.views||0),0);
+
+    box.innerHTML=data.map(p=>`
+      <div class="item">
+        <img src="${p.thumb||''}">
+        <div>
+          <b>${p.title||'-'}</b><br>
+          <span class="badge">👁 ${p.views||0}</span>
+          <span class="badge">💬 ${(p.comments||[]).length}</span>
+
+          ${p.expiredAt && Date.now()>new Date(p.expiredAt)
+            ? '<span class="badge" style="background:red">Expired</span>'
+            : ''
+          }
+
+          <br><br>
+          <button onclick="deletePost('${p.id}')">Hapus</button>
+        </div>
       </div>
-    </div>
-  `).join("") || "Belum ada video";
+    `).join("") || "Kosong";
+
+  }catch{
+    box.innerHTML="Error load";
+  }
 }
 
 async function uploadVideos(){
@@ -141,7 +157,7 @@ async function uploadVideos(){
   fd.append("type",upType.value);
   fd.append("key",upKey.value);
 
-  let expired=upExpired.value||"";
+  let expired=upExpired.value;
   const custom=Number(upExpiredCustom.value||0);
   const unit=upExpiredUnit.value;
 
@@ -153,6 +169,7 @@ async function uploadVideos(){
 
   fd.append("expiredHours",expired);
   fd.append("thumb",upThumb.files[0]);
+
   [...upVideos.files].forEach(v=>fd.append("videos",v));
 
   const r=await fetch("/api/admin/upload-final",{
@@ -161,15 +178,21 @@ async function uploadVideos(){
     body:fd
   });
 
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok) return show(d.message||"Upload gagal");
+  if(!r.ok) return show("Gagal");
 
-  show("Upload berhasil");
+  show("Berhasil");
+
+  upTitle.value="";
+  upDesc.value="";
+  upKey.value="";
+  upVideos.value="";
+  upThumb.value="";
+
   load();
 }
 
 async function deletePost(id){
-  if(!confirm("Hapus video ini?")) return;
+  if(!confirm("Hapus?")) return;
 
   await fetch("/api/admin/posts/"+id,{
     method:"DELETE",
@@ -179,31 +202,11 @@ async function deletePost(id){
   load();
 }
 
-function openUserPost(id){
-  location.href="/?open="+id;
-}
-
 load();
-setInterval(load,3000);
-</script>
 
-
-<script id="ADMIN_STATUS_GUARD">
-setInterval(async()=>{
-  const name=localStorage.getItem("admin_login");
-  if(!name) return;
-
-  try{
-    const r=await fetch("/api/check-account-status/"+encodeURIComponent(name)+"?t="+Date.now());
-    const d=await r.json().catch(()=>({}));
-
-    if(r.ok && d.status && d.status!=="active"){
-      localStorage.removeItem("admin_login");
-      show("Akun kamu sudah tidak aktif / dikick owner");
-      setTimeout(()=>location.href="/admin.html",1200);
-    }
-  }catch(e){}
-},2000);
+setInterval(()=>{
+  if(!typing) load();
+},3000);
 </script>
 
 </body>

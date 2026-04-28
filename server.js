@@ -1148,21 +1148,16 @@ app.get("/api/check-account-status/:name",(req,res)=>{
 });
 
 
-// ===== ADMIN/MOD REPLY COMMENT =====
+
+
+// ===== REPLY COMMENT SHOW IN USER FINAL =====
 app.post("/api/admin/comments/:postId/:index/reply",(req,res)=>{
-  const adminName=req.headers["x-admin-name"];
+  const adminName=req.headers["x-admin-name"] || "Moderator";
   const {reply}=req.body||{};
 
-  if(!adminName) return res.status(401).json({message:"Unauthorized"});
-  if(!reply) return res.status(400).json({message:"Reply kosong"});
-
-  const admins=readAdmins();
-  const acc=admins.find(a=>
-    String(a.name).toLowerCase()===String(adminName).toLowerCase() &&
-    (a.status||"active")==="active"
-  );
-
-  if(!acc) return res.status(403).json({message:"Akun tidak aktif"});
+  if(!reply || !String(reply).trim()){
+    return res.status(400).json({message:"Reply kosong"});
+  }
 
   const posts=readPosts();
   const post=posts.find(p=>String(p.id)===String(req.params.postId));
@@ -1173,85 +1168,30 @@ app.post("/api/admin/comments/:postId/:index/reply",(req,res)=>{
     return res.status(404).json({message:"Komentar tidak ditemukan"});
   }
 
-  post.comments[idx].reply={
-    name:acc.name,
-    role:acc.role||"admin",
+  const data={
+    name:adminName,
+    role:"moderator",
     text:String(reply).trim(),
+    comment:String(reply).trim(),
     at:new Date().toISOString()
   };
 
+  post.comments[idx].reply=data;
+  post.comments[idx].replies=post.comments[idx].replies||[];
+  post.comments[idx].replies.push(data);
+
+  // supaya muncul di halaman user yang lama
+  post.comments.splice(idx+1,0,{
+    name:adminName,
+    text:"↳ "+String(reply).trim(),
+    comment:"↳ "+String(reply).trim(),
+    isReply:true,
+    role:"moderator",
+    at:new Date().toISOString()
+  });
+
   writePosts(posts);
-  res.json({ok:true,reply:post.comments[idx].reply});
+  res.json({ok:true,reply:data});
 });
-
-
-
-// ===== ADMIN UPLOAD VIDEO MAX 9 - 1 THUMBNAIL 1 POST =====
-const adminUpload = multer({
-  dest: path.join(__dirname,"uploads"),
-  limits:{ fileSize: 300 * 1024 * 1024 }
-});
-
-app.post("/api/admin/upload-final",
-  adminUpload.fields([
-    {name:"thumb",maxCount:1},
-    {name:"videos",maxCount:9}
-  ]),
-  (req,res)=>{
-    const adminName=req.headers["x-admin-name"];
-    if(!adminName) return res.status(401).json({message:"Unauthorized"});
-
-    const admins=readAdmins();
-    const acc=admins.find(a=>
-      String(a.name).toLowerCase()===String(adminName).toLowerCase() &&
-      (a.status||"active")==="active"
-    );
-
-    if(!acc) return res.status(403).json({message:"Admin tidak aktif"});
-
-    const {title,desc,type,key,expiredHours}=req.body||{};
-    const thumb=req.files?.thumb?.[0];
-    const videos=req.files?.videos||[];
-
-    if(!title) return res.status(400).json({message:"Judul wajib"});
-    if(!thumb) return res.status(400).json({message:"Thumbnail wajib"});
-    if(videos.length<1) return res.status(400).json({message:"Video wajib"});
-    if(videos.length>9) return res.status(400).json({message:"Maksimal 9 video"});
-
-    const posts=readPosts();
-
-    const videoUrls=videos.map(v=>"/uploads/"+v.filename);
-
-    const post={
-      id:Date.now().toString()+Math.floor(Math.random()*9999),
-      title:String(title).trim(),
-      desc:desc||"",
-      type:type||"public",
-      key:key||"",
-      thumb:"/uploads/"+thumb.filename,
-      thumbnail:"/uploads/"+thumb.filename,
-
-      // penting: 1 post isi banyak video
-      video:videoUrls[0],
-      videos:videoUrls,
-
-      views:0,
-      likes:0,
-      unlikes:0,
-      downloads:0,
-      comments:[],
-      createdAt:new Date().toISOString(),
-      uploader:adminName,
-      expiredAt: expiredHours
-        ? new Date(Date.now() + Number(expiredHours)*60*60*1000).toISOString()
-        : ""
-    };
-
-    posts.unshift(post);
-    writePosts(posts);
-
-    res.json({ok:true,count:videos.length,post});
-  }
-);
 
 app.listen(PORT,"0.0.0.0",()=>console.log("🔥 Web aktif di http://localhost:"+PORT));
