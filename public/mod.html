@@ -13,31 +13,14 @@ input{width:100%;padding:13px;margin:8px 0;border:1px solid #ffc2dc;border-radiu
 button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 15px;font-weight:900;margin:6px 0}
 .hidden{display:none!important}
 .comment{background:#fff6fb;border-left:5px solid #ff3f9d;border-radius:14px;padding:12px;margin:10px 0}
+.replyBox{background:#ffe8f4;padding:8px;border-radius:10px;margin-top:6px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:white;color:#ff3f9d;padding:12px 18px;border-radius:999px;box-shadow:0 10px 25px #0003;display:none;font-weight:900;z-index:99}
-
-.kickToast{
-  position:fixed;
-  left:50%;
-  bottom:26px;
-  transform:translateX(-50%) translateY(20px);
-  background:white;
-  color:#ff3f9d;
-  padding:13px 18px;
-  border-radius:999px;
-  box-shadow:0 12px 30px #0004;
-  font-weight:900;
-  opacity:0;
-  pointer-events:none;
-  transition:.25s;
-  z-index:9999;
-}
-.kickToast.show{
-  opacity:1;
-  transform:translateX(-50%) translateY(0);
-}
+.kickToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:white;color:#ff3f9d;padding:13px 18px;border-radius:999px;box-shadow:0 12px 30px #0004;font-weight:900;display:none}
+.kickToast.show{display:block}
 </style>
 </head>
 <body>
+
 <div class="top">🛡 Moderator Panel</div>
 
 <section class="box" id="loginBox">
@@ -54,26 +37,25 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
 </section>
 
 <div id="toast" class="toast"></div>
-
+<div id="kickToast" class="kickToast"></div>
 
 <script>
-function kickToast(msg){
-  const t=document.getElementById("kickToast");
-  if(!t) return;
-  t.innerText=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),1800);
-}
-
 function show(msg){
   toast.innerText=msg;
   toast.style.display="block";
   setTimeout(()=>toast.style.display="none",1800);
 }
 
+function kickToast(msg){
+  const t=document.getElementById("kickToast");
+  t.innerText=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1800);
+}
+
 async function login(){
-  const n=document.getElementById("name").value.trim();
-  const k=document.getElementById("key").value.trim();
+  const n=name.value.trim();
+  const k=key.value.trim();
 
   if(!n||!k) return show("Isi nama dan key");
 
@@ -84,11 +66,10 @@ async function login(){
   });
 
   const d=await r.json().catch(()=>({}));
-
   if(!r.ok) return show(d.message||"Login gagal");
 
-  if(d.role!=="moderator" && d.role!=="admin" && d.role!=="owner"){
-    return show("Akun ini bukan moderator");
+  if(!["moderator","admin","owner"].includes(d.role)){
+    return show("Bukan moderator");
   }
 
   sessionStorage.setItem("mod_login",d.name);
@@ -100,16 +81,15 @@ async function login(){
 }
 
 function logout(){
-  sessionStorage.removeItem("mod_login");
-  sessionStorage.removeItem("mod_role");
+  sessionStorage.clear();
   location.reload();
 }
 
 async function loadComments(){
   const r=await fetch("/api/posts?t="+Date.now());
   const posts=await r.json().catch(()=>[]);
-
   let html="";
+
   posts.forEach(p=>{
     (p.comments||[]).forEach((c,i)=>{
       html+=`
@@ -117,52 +97,49 @@ async function loadComments(){
         <b>${c.name||"Anonim"}</b><br>
         <small>${p.title||"Video"}</small>
         <p>${c.text||c.comment||""}</p>
-        <button onclick="deleteComment('${p.id}',${i})">Hapus Komentar</button>
 
-${c.reply ? `
-<div style="background:#ffe8f4;padding:8px;border-radius:10px;margin-top:6px">
-<b>${c.reply.name||"Admin"}</b>
-<p>${c.reply.text||""}</p>
-</div>` : ""}
+        ${(c.replies||[]).map(r=>`
+        <div class="replyBox">
+          <b>${r.name||"Moderator"}</b>
+          <p>${r.text||r.comment||""}</p>
+        </div>`).join("")}
 
-<input id="reply_${p.id}_${i}" placeholder="Balas komentar...">
-<button onclick="replyComment('${p.id}',${i})">Reply</button>
-</div>`;
+        <button onclick="deleteComment('${p.id}',${i})">Hapus</button>
 
+        <input id="reply_${p.id}_${i}" placeholder="Balas komentar...">
+        <button onclick="replyComment('${p.id}',${i})">Reply</button>
+      </div>`;
     });
   });
 
-  comments.innerHTML=html || "Belum ada komentar";
+  comments.innerHTML=html||"Belum ada komentar";
 }
-
-
 
 async function replyComment(postId,index){
   const inp=document.getElementById("reply_"+postId+"_"+index);
-  const reply=inp ? inp.value.trim() : "";
+  const reply=inp.value.trim();
+  if(!reply) return show("Isi dulu");
 
-  if(!reply) return show("Isi reply dulu");
-
-  const r=await fetch("/api/admin/comments/"+postId+"/"+index+"/reply",{
+  const r=await fetch("/api/admin/posts/"+postId+"/comments/"+index+"/reply",{
     method:"POST",
     headers:{
       "Content-Type":"application/json",
-      "x-admin-name":sessionStorage.getItem("mod_login") || localStorage.getItem("mod_login") || "Moderator"
+      "x-admin-name":sessionStorage.getItem("mod_login")||"Moderator"
     },
-    body:JSON.stringify({reply})
+    body:JSON.stringify({
+      text:reply,
+      adminName:sessionStorage.getItem("mod_login")||"Moderator",
+      role:"moderator"
+    })
   });
 
   const d=await r.json().catch(()=>({}));
+  if(!r.ok) return show(d.message||"Gagal");
 
-  if(!r.ok){
-    return show(d.message || "Gagal reply");
-  }
-
-  show("Reply terkirim");
   inp.value="";
+  show("Reply terkirim");
   loadComments();
 }
-
 
 async function deleteComment(postId,index){
   const r=await fetch("/api/admin/comment/"+postId+"/"+index,{
@@ -170,34 +147,45 @@ async function deleteComment(postId,index){
     headers:{"x-admin-name":sessionStorage.getItem("mod_login")||""}
   });
 
-  if(!r.ok) return show("Gagal hapus komentar");
-  show("Komentar dihapus");
+  if(!r.ok) return show("Gagal hapus");
+  show("Dihapus");
   loadComments();
 }
 
+/* FIX biar ngetik gak hilang */
+let modTyping=false;
+
+document.addEventListener("focusin",e=>{
+  if(e.target.matches("input")) modTyping=true;
+});
+
+document.addEventListener("focusout",e=>{
+  if(e.target.matches("input")){
+    setTimeout(()=>modTyping=false,700);
+  }
+});
+
 setInterval(()=>{
-  if(!panel.classList.contains("hidden")) loadComments();
+  if(!panel.classList.contains("hidden") && !modTyping){
+    loadComments();
+  }
 },3000);
-</script>
 
-
-<script id="MOD_STATUS_GUARD">
+/* cek akun */
 setInterval(async()=>{
-  const name=sessionStorage.getItem("mod_login");
-  if(!name) return;
+  const n=sessionStorage.getItem("mod_login");
+  if(!n) return;
 
-  const r=await fetch("/api/check-account-status/"+encodeURIComponent(name)+"?t="+Date.now());
+  const r=await fetch("/api/check-account-status/"+n);
   const d=await r.json().catch(()=>({}));
 
   if(!r.ok || d.status!=="active"){
-    sessionStorage.removeItem("mod_login");
-    sessionStorage.removeItem("mod_role");
-    kickToast("Akun kamu sudah tidak aktif / dikick owner");
-    location.href="/mod.html";
+    sessionStorage.clear();
+    kickToast("Akun kamu di kick");
+    setTimeout(()=>location.href="/mod.html",1000);
   }
 },2000);
 </script>
 
-<div id="kickToast" class="kickToast"></div>
 </body>
 </html>
