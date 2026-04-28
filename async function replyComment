@@ -143,14 +143,18 @@ async function replyComment(postId,index){
 
   if(!reply) return show("Isi reply dulu");
 
-  const r=await fetch("/api/admin/comments/"+postId+"/"+index+"/reply",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "x-admin-name":sessionStorage.getItem("mod_login") || localStorage.getItem("mod_login") || "Moderator"
-    },
-    body:JSON.stringify({reply})
-  });
+  const r = await fetch("/api/admin/posts/"+postId+"/comments/"+index+"/reply",{
+  method:"POST",
+  headers:{
+    "Content-Type":"application/json",
+    "x-admin-name": sessionStorage.getItem("mod_login") || "Moderator"
+  },
+  body: JSON.stringify({
+    text: reply,
+    adminName: sessionStorage.getItem("mod_login") || "Moderator",
+    role: "moderator"
+  })
+});
 
   const d=await r.json().catch(()=>({}));
 
