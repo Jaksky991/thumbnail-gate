@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Login</title>
+
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#ff9bdc,#ffc2e2,#ffe1ef);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  width:92%;
+  max-width:380px;
+  background:white;
+  padding:28px;
+  border-radius:26px;
+  box-shadow:0 15px 40px #ff3f9d40;
+  text-align:center;
+}
+
+h2{
+  margin:0 0 16px;
+  background:linear-gradient(90deg,#ff3f9d,#ff7ac3);
+  -webkit-background-clip:text;
+  color:transparent;
+  font-size:26px;
+}
+
+input{
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  border-radius:14px;
+  border:1px solid #ffc2dc;
+  outline:none;
+}
+
+button{
+  width:100%;
+  padding:13px;
+  border-radius:999px;
+  border:0;
+  background:linear-gradient(90deg,#ff3f9d,#ff7ac3);
+  color:white;
+  font-weight:900;
+  margin-top:10px;
+  box-shadow:0 8px 20px #ff3f9d55;
+}
+
+button:active{
+  transform:scale(0.96);
+}
+
+.small{
+  font-size:12px;
+  opacity:.6;
+  margin-top:10px;
+}
+</style>
+
+</head>
+
+<body><div class="card"><h2>Login Admin 🔐</h2>Login Admin</h2>
+
+<input id="name" placeholder="Nama">
+<input id="key" placeholder="Key">
+
+<button onclick="login()">Masuk</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+function show(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",2000);
+}
+
+
+
+async function login(){
+  const name=document.getElementById("name").value.trim();
+  const key=document.getElementById("key").value.trim();
+
+  if(!name||!key) return show("Isi nama dan key");
+
+  const r=await fetch("/api/admin-login-real",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,key})
+  });
+
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) return show(d.message||"Login gagal");
+
+  if(d.role!=="admin" && d.role!=="owner"){
+    return show("Bukan akun admin");
+  }
+
+  localStorage.setItem("admin_login",d.name);
+  show("Login berhasil");
+
+  setTimeout(()=>location.href="/admin-panel.html",700);
+}
+</script>
+
+</div></body>
+</html>

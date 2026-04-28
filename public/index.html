@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>XYRON VIDEO</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.hidden{display:none!important}
+body{background:linear-gradient(135deg,#ffd6e8,#ffeaf4)}
+.userTop{position:sticky;top:0;z-index:9;background:linear-gradient(135deg,#ffd6e8,#ffeaf4);padding:10px}
+#search{width:100%;padding:14px;border-radius:18px;border:2px solid #ff4fa3}
+#list{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:14px}
+.card{background:white;border-radius:20px;overflow:hidden;box-shadow:0 12px 28px rgba(255,63,157,.22)}
+.thumb{position:relative;height:280px;background:#ffe3f1}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.badge{position:absolute;top:8px;right:8px;padding:5px 9px;border-radius:999px;color:white;font-size:11px;font-weight:900;background:#ff3f9d}
+.body{padding:12px}
+.meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.meta span{background:#fff;border-radius:999px;padding:6px 9px;box-shadow:0 4px 12px rgba(255,63,157,.15);font-size:12px;font-weight:800}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99;overflow:auto;padding:20px}
+.modalBox{background:white;max-width:640px;margin:auto;border-radius:24px;padding:18px}
+video{width:100%;border-radius:18px;background:#000}
+.btns button,.rate button,#tabs button{margin:5px;padding:10px 14px;border-radius:999px;border:0;background:#ff3f9d;color:white;font-weight:900}
+.clicked{background:#22c55e!important}
+.disabledBtn{background:#999!important}
+.lockBox{background:#fff1f8;padding:14px;border-radius:18px;margin:12px 0}
+.lockBox input,.commentInput{width:100%;padding:13px;border-radius:14px;border:1px solid #ffc6dc;margin:7px 0}
+.comment{background:#fff1f8;border-radius:14px;padding:10px;margin:8px 0}
+@media(max-width:430px){.thumb{height:230px}#list{gap:10px;padding:10px}}
+</style>
+</head>
+<body>
+
+<div class="userTop">
+  <input id="search" placeholder="🔍 Cari video...">
+</div>
+
+<div id="list"></div>
+
+<div id="modal" class="hidden">
+  <div class="modalBox">
+    <button onclick="closeModal()">×</button>
+    <div id="lockArea"></div>
+    <video id="player" controls class="hidden"></video>
+    <div id="tabs"></div>
+    <h3 id="mtitle"></h3>
+    <p id="mdesc"></p>
+
+    <div class="btns">
+      <button id="likeBtn" onclick="doLike()">👍 Like</button>
+      <button id="unlikeBtn" onclick="doUnlike()">👎 Unlike</button>
+    </div>
+
+    <div class="rate">
+      Rating:
+      <button onclick="doRate(1)">1</button>
+      <button onclick="doRate(2)">2</button>
+      <button onclick="doRate(3)">3</button>
+      <button onclick="doRate(4)">4</button>
+      <button onclick="doRate(5)">5</button>
+    </div>
+
+    <div id="comments"></div>
+    <input id="cname" class="commentInput" placeholder="Nama">
+    <input id="ctext" class="commentInput" placeholder="Komentar">
+    <button onclick="sendComment()">Kirim Komentar</button>
+  </div>
+</div>
+
+<script>
+let posts=[], active=null, videos=[];
+let uid=localStorage.getItem("deviceId");
+if(!uid){uid="u_"+Date.now()+"_"+Math.random().toString(36).slice(2);localStorage.setItem("deviceId",uid)}
+
+async function api(url,body={}){
+  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-user-id":uid},body:JSON.stringify(body)});
+  return {ok:r.ok,data:await r.json().catch(()=>({}))};
+}
+async function load(){
+  const r=await fetch("/api/posts?ts="+Date.now());
+  posts=await r.json();
+  render();
+}
+function isLocked(p){return !!String(p.key||p.vipKey||p.password||"").trim() || p.type==="vip"}
+function render(){
+  const q=(search.value||"").toLowerCase();
+  const data=posts.filter(p=>(p.title||"").toLowerCase().includes(q));
+  list.innerHTML=data.map(p=>`
+    <div class="card" onclick="openPost('${p.id}')">
+      <div class="thumb">
+        <img src="${p.thumb||p.thumbnail||''}">
+        ${isLocked(p)?'<span class="badge">VIP 🔒</span>':''}
+      </div>
+      <div class="body">
+        <b>${p.title||'Tanpa judul'}</b>
+        <div class="meta">
+          <span>⭐ ${p.ratingAvg||p.rating||0}</span>
+          <span>👁 ${p.views||0}</span>
+          <span>👍 ${p.likes||0}</span>
+          <span>👎 ${p.unlikes||p.dislikes||0}</span>
+          <span>💬 ${(p.comments||[]).length}</span>
+          <span>⬇️ ${p.downloads||0}</span>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+async function openPost(id){
+  active=posts.find(p=>p.id==id);
+  modal.classList.remove("hidden");
+  mtitle.innerText=active.title||"";
+  mdesc.innerText=active.desc||"";
+  player.classList.add("hidden");
+  player.src="";
+  tabs.innerHTML="";
+  lockArea.innerHTML="";
+  videos=[];
+  await api("/api/x/view/"+id);
+  if(isLocked(active)){
+    lockArea.innerHTML=`<div class="lockBox"><b>🔒 Masukkan kunci VIP</b><input id="vipInput" placeholder="Kunci VIP"><button onclick="unlockNow()">Buka</button></div>`;
+  }else{
+    setVideos(active.videos||[active.video].filter(Boolean));
+  }
+  paintButtons();
+  renderComments();
+  await load();
+}
+async function unlockNow(){
+  const key=document.getElementById("vipInput").value.trim();
+  const r=await api("/api/x/unlock/"+active.id,{key});
+  if(!r.ok){showToast(r.data.message||"Kunci salah");return}
+  lockArea.innerHTML="";
+  setVideos(r.data.videos||[]);
+}
+function setVideos(v){
+  videos=v||[];
+  if(!videos.length)return;
+  player.classList.remove("hidden");
+  play(0);
+  tabs.innerHTML=videos.map((x,i)=>`<button onclick="play(${i})">Video ${i+1}</button>`).join("");
+}
+function play(i){player.src=videos[i];player.play().catch(()=>{})}
+function paintButtons(){
+  likeBtn.className=active?.likedBy?.[uid]?"clicked":"";
+  unlikeBtn.className=active?.unlikedBy?.[uid]?"clicked":"";
+}
+async function doLike(){const r=await api("/api/x/like/"+active.id);active=r.data;paintButtons();await load()}
+async function doUnlike(){const r=await api("/api/x/unlike/"+active.id);active=r.data;paintButtons();await load()}
+async function doRate(n){const r=await api("/api/x/rating/"+active.id,{rating:n}); if(!r.ok) showToast(r.data.message); active=r.data; await load(); showToast("Rating tersimpan: "+n)}
+async function sendComment(){
+  const name=cname.value.trim()||"User", text=ctext.value.trim();
+  if(!text)return;
+  const r=await fetch("/api/posts/"+active.id+"/comment",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":uid},body:JSON.stringify({name,text,userId:uid})});
+  active=await r.json(); ctext.value=""; renderComments(); await load();
+}
+function renderComments(){
+  comments.innerHTML=(active.comments||[]).map(c=>`<div class="comment"><b>${c.name||'User'}</b><p>${c.text||''}</p>${(c.replies||[]).map(r=>`<div class="comment"><b>${r.name||'Admin'} <span class="verifyBadge">ADMIN</span> <span class="verifyBadge">ADMIN</span> </b><p>${r.text||''}</p></div>`).join("")}</div>`).join("");
+}
+function closeModal(){modal.classList.add("hidden");player.pause();player.src=""}
+search.oninput=render;
+load();
+</script>
+
+<script id="TIKTOK_BUTTON_UI_FINAL">
+(function(){
+  function ensureDevice(){
+    if(typeof uid==="undefined" || !uid){
+      window.uid=localStorage.getItem("deviceId");
+      if(!window.uid){
+        window.uid="u_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+        localStorage.setItem("deviceId",window.uid);
+      }
+    }
+  }
+
+  async function apiT(url){
+    ensureDevice();
+    const r=await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-user-id":uid
+      },
+      body:JSON.stringify({})
+    });
+    return {ok:r.ok,data:await r.json().catch(()=>({}))};
+  }
+
+  window.doLike=async function(){
+    if(!active) return showToast("Buka video dulu");
+    const r=await apiT("/api/t/like/"+active.id);
+    if(!r.ok) return showToast(r.data.message||"Gagal like");
+    active=r.data;
+    paintButtons();
+    await load();
+  };
+
+  window.doUnlike=async function(){
+    if(!active) return showToast("Buka video dulu");
+    const r=await apiT("/api/t/unlike/"+active.id);
+    if(!r.ok) return showToast(r.data.message||"Gagal unlike");
+    active=r.data;
+    paintButtons();
+    await load();
+  };
+
+  window.doDownload=async function(){
+    if(!active) return showToast("Buka video dulu");
+    const r=await apiT("/api/t/download/"+active.id);
+    if(r.ok) active=r.data;
+    const v=active.video || (active.videos && active.videos[0]);
+    if(v) window.open(v,"_blank");
+    else showToast("Video belum terbuka");
+    await load();
+  };
+
+  window.paintButtons=function(){
+    if(!active) return;
+    const liked=active.likedBy && active.likedBy[uid];
+    const unliked=active.unlikedBy && active.unlikedBy[uid];
+
+    likeBtn.className=liked ? "likeActive" : "likeNormal";
+    unlikeBtn.className=unliked ? "unlikeActive" : "unlikeNormal";
+
+    likeBtn.innerHTML="❤️ Like";
+    unlikeBtn.innerHTML="👎 Unlike";
+  };
+
+  setInterval(()=>{
+    const btns=document.querySelector(".btns");
+    if(btns && !document.getElementById("downloadBtn")){
+      const b=document.createElement("button");
+      b.id="downloadBtn";
+      b.innerHTML="⬇️ Download";
+      b.onclick=doDownload;
+      btns.appendChild(b);
+    }
+  },500);
+})();
+</script>
+
+
+<script id="DOWNLOAD_FIX_FINAL">
+(function(){
+
+  window.doDownload = async function(){
+    if(!active) return showToast("Buka video dulu");
+
+    // cek kunci VIP
+    const isLocked = !!String(active.key || active.vipKey || "").trim();
+
+    if(isLocked && (!videos || !videos.length)){
+      showToast("Masukkan kunci VIP dulu");
+      return;
+    }
+
+    // ambil video yang BENAR
+    let file = "";
+
+    if(videos && videos.length){
+      file = videos[0];
+    } else if(active.videos && active.videos.length){
+      file = active.videos[0];
+    } else {
+      file = active.video || "";
+    }
+
+    if(!file){
+      showToast("Video tidak ditemukan");
+      return;
+    }
+
+    // hitung download
+    await api("/api/t/download/" + active.id);
+
+    // paksa download (bukan buka admin)
+    const a = document.createElement("a");
+    a.href = file;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    await load();
+  };
+
+  // inject tombol kalau belum ada
+  setInterval(()=>{
+    const btns=document.querySelector(".btns");
+    if(btns && !document.getElementById("downloadBtn")){
+      const b=document.createElement("button");
+      b.id="downloadBtn";
+      b.innerHTML="⬇️ Download";
+      b.onclick=doDownload;
+      btns.appendChild(b);
+    }
+  },500);
+
+})();
+</script>
+
+<script id="USER_DELETE_COMMENT_FIX">
+(function(){
+  window.deleteMyComment = async function(i){
+    if(!active) return;
+    if(!confirm("Hapus komentar kamu?")) return;
+
+    const res=await fetch("/api/comment/user-delete/"+active.id+"/"+i,{
+      method:"DELETE",
+      headers:{
+        "Content-Type":"application/json",
+        "x-user-id":uid
+      }
+    });
+
+    const data=await res.json().catch(()=>({}));
+
+    if(!res.ok){
+      showToast(data.message || "Gagal hapus komentar");
+      return;
+    }
+
+    active=data;
+    renderComments();
+    await load();
+  };
+
+  window.renderComments=function(){
+    if(!active) return;
+
+    comments.innerHTML=(active.comments||[]).map((c,i)=>{
+      const mine = String(c.userId||c.deviceId||"") === String(uid);
+      return `
+        <div class="comment">
+          <b>${c.name||'User'}</b>
+          <p>${c.text||''}</p>
+
+          ${(c.replies||[]).map(r=>`
+            <div class="comment adminReplyShow">
+              <b>${r.name||'Admin'} <span class="verifyBadge">ADMIN</span> <span class="verifyBadge">ADMIN</span> </b>
+              <p>${r.text||''}</p>
+            </div>
+          `).join("")}
+
+          ${mine ? `<button class="deleteMineBtn" onclick="deleteMyComment(${i})">Hapus Komentar Saya</button>` : ""}
+        </div>
+      `;
+    }).join("");
+  };
+})();
+</script>
+
+
+<script id="LIKE_FINAL_COMPLETE">
+(function(){
+  function uid(){
+    let x=localStorage.getItem("deviceId");
+    if(!x){
+      x="u_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+      localStorage.setItem("deviceId",x);
+    }
+    return x;
+  }
+
+  async function hit(url){
+    const r=await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-user-id":uid()
+      },
+      body:"{}"
+    });
+    return await r.json();
+  }
+
+  window.doLike=async function(){
+    if(!active) return showToast("Buka video dulu");
+    active=await hit("/api/final-like/"+active.id);
+    paintButtons();
+    await load();
+  };
+
+  window.doUnlike=async function(){
+    if(!active) return showToast("Buka video dulu");
+    active=await hit("/api/final-unlike/"+active.id);
+    paintButtons();
+    await load();
+  };
+
+  window.paintButtons=function(){
+    if(!active) return;
+    const u=uid();
+
+    if(window.likeBtn){
+      const liked=active.likedBy && active.likedBy[u];
+      likeBtn.className=liked ? "likeActive" : "likeNormal";
+      likeBtn.innerHTML=liked ? "❤️ Liked" : "❤️ Like";
+    }
+
+    if(window.unlikeBtn){
+      const unliked=active.unlikedBy && active.unlikedBy[u];
+      unlikeBtn.className=unliked ? "unlikeActive" : "unlikeNormal";
+      unlikeBtn.innerHTML=unliked ? "👎 Unliked" : "👎 Unlike";
+    }
+  };
+})();
+</script>
+
+
+<script id="LIKE_FIX_FINAL">
+function uid(){
+  let id=localStorage.getItem("uid");
+  if(!id){
+    id="u"+Date.now();
+    localStorage.setItem("uid",id);
+  }
+  return id;
+}
+
+async function doLike(id){
+  await fetch("/api/react/"+id,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-user-id":uid()
+    },
+    body:JSON.stringify({type:"like"})
+  });
+  location.reload();
+}
+
+async function doUnlike(id){
+  await fetch("/api/react/"+id,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-user-id":uid()
+    },
+    body:JSON.stringify({type:"unlike"})
+  });
+  location.reload();
+}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script id="FAV_UI_UPGRADE_FINAL">
+(function(){
+  function favs(){
+    return JSON.parse(localStorage.getItem("fav")||"[]");
+  }
+
+  window.toggleFav=function(id,e){
+    if(e) e.stopPropagation();
+
+    id=String(id);
+    let f=favs();
+    const on=!f.includes(id);
+
+    if(on) f.push(id);
+    else f=f.filter(x=>x!==id);
+
+    localStorage.setItem("fav",JSON.stringify(f));
+
+    const btn=e?.target?.closest?.(".btnFav");
+    if(btn){
+      btn.classList.toggle("active",on);
+      btn.innerHTML=on?"❤️":"♡";
+      btn.classList.remove("pop");
+      void btn.offsetWidth;
+      btn.classList.add("pop");
+
+      if(on){
+        const b=document.createElement("span");
+        b.className="favBurst";
+        b.innerHTML="❤️";
+        btn.parentElement.appendChild(b);
+        setTimeout(()=>b.remove(),700);
+      }
+    }
+
+    if(typeof applyFilter==="function") applyFilter();
+  };
+
+  document.addEventListener("DOMContentLoaded",()=>{
+    setTimeout(()=>{
+      document.querySelectorAll(".btnFav").forEach(btn=>{
+        const card=btn.closest(".card");
+        const id=String(card?.dataset?.id||"");
+        if(favs().includes(id)){
+          btn.classList.add("active");
+          btn.innerHTML="❤️";
+        }else{
+          btn.classList.remove("active");
+          btn.innerHTML="♡";
+        }
+      });
+    },500);
+  });
+})();
+</script>
+
+
+<script id="FINAL_RENDER_WITH_ACTIONS">
+(function(){
+  let mode="semua";
+
+  function favs(){
+    return JSON.parse(localStorage.getItem("fav")||"[]");
+  }
+
+  function isExpired(p){
+    if(p.expired===true || p.expired==="true") return true;
+    if(p.expiredAt){
+      const t=new Date(p.expiredAt).getTime();
+      return !isNaN(t) && t<Date.now();
+    }
+    return false;
+  }
+
+  function makeTabs(){
+    const search=document.querySelector("#search,input[placeholder*='Cari'],input");
+    if(!search || document.getElementById("filterTabs")) return;
+
+    const tabs=document.createElement("div");
+    tabs.id="filterTabs";
+    tabs.innerHTML=`
+      <button data-mode="semua">Semua</button>
+      <button data-mode="terbaru">Terbaru</button>
+      <button data-mode="favorit">Favorit</button>
+      <button data-mode="trending">Trending</button>
+      <button data-mode="vip">VIP</button>
+      <button data-mode="expired">Expired</button>
+    `;
+    search.insertAdjacentElement("afterend",tabs);
+
+    tabs.querySelectorAll("button").forEach(btn=>{
+      btn.onclick=()=>{
+        mode=btn.dataset.mode;
+        render();
+      };
+    });
+  }
+
+  window.toggleFav=function(id,e){
+    if(e) e.stopPropagation();
+
+    id=String(id);
+    let f=favs();
+
+    if(f.includes(id)) f=f.filter(x=>x!==id);
+    else f.push(id);
+
+    localStorage.setItem("fav",JSON.stringify(f));
+    render();
+  };
+
+  window.render=function(){
+    makeTabs();
+
+    const list=document.getElementById("list");
+    if(!list) return;
+
+    document.querySelectorAll("#filterTabs button").forEach(b=>{
+      b.classList.toggle("active",b.dataset.mode===mode);
+    });
+
+    const fav=favs();
+    const q=(document.querySelector("#search,input[placeholder*='Cari']")?.value||"").toLowerCase();
+
+    let data=[...(window.posts || posts || [])];
+
+    if(mode==="favorit") data=data.filter(p=>fav.includes(String(p.id)));
+    if(mode==="expired") data=data.filter(p=>isExpired(p));
+    if(mode==="vip") data=data.filter(p=>p.type==="vip" || p.key || p.vipKey);
+    if(mode==="trending") data=data.filter(p=>Number(p.views||0)>0 || Number(p.likes||0)>0);
+    if(mode==="terbaru") data=data.sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+
+    data=data.filter(p=>(p.title||"").toLowerCase().includes(q));
+
+    list.innerHTML=data.map(p=>`
+      <div class="card" data-id="${p.id}">
+        <div class="thumb" onclick="openPost('${p.id}')">
+          <img src="${p.thumb||p.thumbnail||''}">
+          ${(p.type==="vip"||p.key||p.vipKey)?'<span class="badge">VIP 🔒</span>':''}
+          <button class="btnFav ${fav.includes(String(p.id))?'active':''}" onclick="toggleFav('${p.id}',event)">
+            ${fav.includes(String(p.id))?'❤️':'♡'}
+          </button>
+        </div>
+
+        <div class="body" onclick="openPost('${p.id}')">
+          <b>${p.title||'Tanpa judul'}</b>
+
+          <div class="meta">
+            <span>⭐ ${p.ratingAvg||p.rating||'0.0'}</span>
+            <span>👁 ${p.views||0}</span>
+            <span>👍 ${p.likes||p.like||0}</span>
+            <span>👎 ${p.unlikes||p.unlike||p.dislikes||0}</span>
+            <span>💬 ${(p.comments||[]).length}</span>
+            <span>⬇️ ${p.downloads||0}</span>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  };
+
+  const oldLoad=window.load;
+  if(typeof oldLoad==="function"){
+    window.load=async function(){
+      await oldLoad();
+      render();
+    };
+  }
+
+  setTimeout(render,700);
+})();
+</script>
+
+
+<script id="TOAST_SYSTEM">
+function showToast(msg,type=""){
+  let t=document.querySelector(".toast");
+  if(!t){
+    t=document.createElement("div");
+    t.className="toast";
+    document.body.appendChild(t);
+  }
+
+  t.className="toast show "+type;
+  t.innerText=msg;
+
+  setTimeout(()=>{
+    t.classList.remove("show");
+  },2000);
+}
+</script>
+
+
+<script id="EXPIRED_UI_FINAL">
+(function(){
+  window.isExpiredFinal=function(p){
+    if(!p || !p.expiredAt) return false;
+    const t=new Date(p.expiredAt).getTime();
+    return !isNaN(t) && t < Date.now();
+  };
+
+  const oldOpen=window.openPost;
+  if(typeof oldOpen==="function"){
+    window.openPost=function(id){
+      const p=(window.posts||posts||[]).find(x=>String(x.id)===String(id));
+      if(window.isExpiredFinal(p)){
+        if(typeof showToast==="function") showToast("Video sudah expired");
+        else alert("Video sudah expired");
+        return;
+      }
+      return oldOpen(id);
+    };
+  }
+
+  const oldRender=window.render;
+  window.render=function(){
+    if(typeof oldRender==="function") oldRender();
+
+    document.querySelectorAll("#list .card").forEach(card=>{
+      const id=card.dataset.id;
+      const p=(window.posts||posts||[]).find(x=>String(x.id)===String(id));
+      if(!p) return;
+
+      if(window.isExpiredFinal(p)){
+        card.classList.add("expiredCard");
+        const thumb=card.querySelector(".thumb");
+        if(thumb && !thumb.querySelector(".expiredBadge")){
+          const b=document.createElement("span");
+          b.className="expiredBadge";
+          b.innerText="EXPIRED";
+          thumb.appendChild(b);
+        }
+      }
+    });
+  };
+
+  setTimeout(()=>{ if(typeof render==="function") render(); },500);
+})();
+</script>
+
+</body>
+</html>
+
+
+
+<script id="TAB_ACTIVE_FINAL">
+
+document.addEventListener("click",function(e){
+  const btn = e.target.closest("#filterTabs button");
+  if(!btn) return;
+
+  document.querySelectorAll("#filterTabs button")
+    .forEach(b=>b.classList.remove("active"));
+
+  btn.classList.add("active");
+
+  btn.scrollIntoView({
+    behavior:"smooth",
+    inline:"center"
+  });
+});
+
+/* default aktif = semua */
+setTimeout(()=>{
+  const first = document.querySelector("#filterTabs button");
+  if(first) first.classList.add("active");
+},500);
+
+</script>
+
