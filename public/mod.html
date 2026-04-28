@@ -25,8 +25,8 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
 
 <section class="box" id="loginBox">
 <h2>Login Moderator</h2>
-<input id="name" placeholder="Nama moderator">
-<input id="key" placeholder="Key 1 / Key 2">
+<input id="name" placeholder="Key 1">
+<input id="key" placeholder="Key 2">
 <button onclick="login()">Masuk</button>
 </section>
 
@@ -53,27 +53,29 @@ function kickToast(msg){
   setTimeout(()=>t.classList.remove("show"),1800);
 }
 
+/* 🔥 LOGIN FIX (PAKAI SERVER KAMU) */
 async function login(){
-  const n=name.value.trim();
-  const k=key.value.trim();
+  const k1=name.value.trim();
+  const k2=key.value.trim();
 
-  if(!n||!k) return show("Isi nama dan key");
+  if(!k1||!k2) return show("Isi key");
 
-  const r=await fetch("/api/admin-login-real",{
+  const r=await fetch("/api/role-login",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({name:n,key:k})
+    body:JSON.stringify({
+      key1:k1,
+      key2:k2,
+      role:"moderator"
+    })
   });
 
   const d=await r.json().catch(()=>({}));
+
   if(!r.ok) return show(d.message||"Login gagal");
 
-  if(!["moderator","admin","owner"].includes(d.role)){
-    return show("Bukan moderator");
-  }
-
-  sessionStorage.setItem("mod_login",d.name);
-  sessionStorage.setItem("mod_role",d.role);
+  sessionStorage.setItem("mod_login",d.adminName || "Moderator");
+  sessionStorage.setItem("mod_role",d.adminRole || "moderator");
 
   loginBox.classList.add("hidden");
   panel.classList.remove("hidden");
@@ -115,6 +117,7 @@ async function loadComments(){
   comments.innerHTML=html||"Belum ada komentar";
 }
 
+/* 🔥 REPLY FIX */
 async function replyComment(postId,index){
   const inp=document.getElementById("reply_"+postId+"_"+index);
   const reply=inp.value.trim();
@@ -152,7 +155,7 @@ async function deleteComment(postId,index){
   loadComments();
 }
 
-/* FIX biar ngetik gak hilang */
+/* 🔥 ANTI ILANG SAAT NGETIK */
 let modTyping=false;
 
 document.addEventListener("focusin",e=>{
@@ -171,7 +174,7 @@ setInterval(()=>{
   }
 },3000);
 
-/* cek akun */
+/* 🔥 CEK STATUS */
 setInterval(async()=>{
   const n=sessionStorage.getItem("mod_login");
   if(!n) return;
