@@ -1225,11 +1225,18 @@ app.post("/api/admin/upload-final",
 );
 
 
-// ===== OWNER KICK FINAL ENDPOINT =====
-app.patch("/api/owner/set-status-final/:name",(req,res)=>{
+// ===== OWNER ACCOUNT STATUS FIX =====
+app.get("/api/owner/accounts-final",(req,res)=>{
+  res.json(readAdmins().map(a=>({
+    name:a.name,
+    role:a.role||"admin",
+    status:a.status||"active"
+  })));
+});
+
+app.patch("/api/owner/accounts-final/:name/status",(req,res)=>{
   const admins=readAdmins();
-  const name=String(req.params.name||"").toLowerCase();
-  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+  const acc=admins.find(a=>String(a.name).toLowerCase()===String(req.params.name).toLowerCase());
 
   if(!acc) return res.status(404).json({message:"Akun tidak ditemukan"});
   if(acc.role==="owner") return res.status(403).json({message:"Owner tidak bisa diubah"});
@@ -1240,48 +1247,27 @@ app.patch("/api/owner/set-status-final/:name",(req,res)=>{
   res.json({ok:true,account:acc});
 });
 
-// ===== CHECK STATUS FINAL =====
-app.get("/api/check-status-final/:name",(req,res)=>{
-  const admins=readAdmins();
-  const name=String(req.params.name||"").toLowerCase();
-  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+app.delete("/api/owner/accounts-final/:name",(req,res)=>{
+  let admins=readAdmins();
+  admins=admins.filter(a=>{
+    if(a.role==="owner") return true;
+    return String(a.name).toLowerCase()!==String(req.params.name).toLowerCase();
+  });
 
-  if(!acc) return res.json({ok:false,status:"kicked"});
-
-  let status=String(acc.status||"active").toLowerCase();
-  if(status==="kick") status="kicked";
-
-  res.json({ok:true,name:acc.name,role:acc.role||"admin",status});
-});
-
-
-// ===== OWNER STATUS FORCE FIX =====
-app.patch("/api/owner/status/:name",(req,res)=>{
-  const admins=readAdmins();
-  const name=String(req.params.name||"").toLowerCase();
-  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
-
-  if(!acc) return res.status(404).json({message:"Akun tidak ditemukan"});
-  if(acc.role==="owner") return res.status(403).json({message:"Owner tidak bisa diubah"});
-
-  acc.status=String(req.body.status||"active").toLowerCase();
   writeAdmins(admins);
-
-  res.json({ok:true,account:acc});
+  res.json({ok:true});
 });
 
-app.get("/api/owner/status/:name",(req,res)=>{
-  const admins=readAdmins();
-  const name=String(req.params.name||"").toLowerCase();
-  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+app.get("/api/check-account-status/:name",(req,res)=>{
+  const acc=readAdmins().find(a=>String(a.name).toLowerCase()===String(req.params.name).toLowerCase());
 
-  if(!acc) return res.json({ok:false,status:"kicked"});
+  if(!acc) return res.status(404).json({status:"kicked"});
 
   res.json({
     ok:true,
     name:acc.name,
     role:acc.role||"admin",
-    status:String(acc.status||"active").toLowerCase()
+    status:acc.status||"active"
   });
 });
 
