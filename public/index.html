@@ -700,6 +700,182 @@ function showToast(msg,type=""){
 })();
 </script>
 
+
+<script id="EXPIRED_TIME_UI">
+(function(){
+  function leftText(expiredAt){
+    if(!expiredAt) return "";
+    const diff=new Date(expiredAt).getTime()-Date.now();
+    if(isNaN(diff)) return "";
+    if(diff<=0) return "Expired";
+
+    const m=Math.floor(diff/60000);
+    const h=Math.floor(m/60);
+    const d=Math.floor(h/24);
+
+    if(d>0) return d+" hari lagi";
+    if(h>0) return h+" jam lagi";
+    return Math.max(m,1)+" menit lagi";
+  }
+
+  function paintExpiredTime(){
+    document.querySelectorAll(".card").forEach(card=>{
+      const id=card.dataset.id;
+      const arr=window.posts||[];
+      const p=arr.find(x=>String(x.id)===String(id));
+      if(!p || !p.expiredAt) return;
+
+      let target=card.querySelector(".meta") || card.querySelector(".stats") || card;
+      let old=card.querySelector(".expTime");
+      if(old) old.remove();
+
+      const txt=leftText(p.expiredAt);
+      const span=document.createElement("span");
+      span.className="expTime"+(txt==="Expired"?" danger":"");
+      span.innerText="⏳ "+txt;
+      target.appendChild(span);
+    });
+  }
+
+  const oldRender=window.render;
+  if(typeof oldRender==="function"){
+    window.render=function(){
+      oldRender();
+      setTimeout(paintExpiredTime,50);
+    }
+  }
+
+  setInterval(paintExpiredTime,30000);
+  setTimeout(paintExpiredTime,500);
+})();
+</script>
+
+
+<script id="EXPIRED_ALL_TAB_FIX">
+(function(){
+  function expText(expiredAt){
+    if(!expiredAt) return "";
+    const diff=new Date(expiredAt).getTime()-Date.now();
+    if(isNaN(diff)) return "";
+    if(diff<=0) return "Expired";
+
+    const m=Math.floor(diff/60000);
+    const h=Math.floor(m/60);
+    const d=Math.floor(h/24);
+
+    if(d>0) return d+" hari lagi";
+    if(h>0) return h+" jam lagi";
+    return Math.max(m,1)+" menit lagi";
+  }
+
+  function paintExpiredAll(){
+    const data=window.posts||[];
+    const cards=document.querySelectorAll(".card");
+
+    cards.forEach(card=>{
+      if(card.querySelector(".expText")) return;
+
+      let post=null;
+      const id=card.dataset.id;
+
+      if(id){
+        post=data.find(p=>String(p.id)===String(id));
+      }
+
+      if(!post){
+        post=data.find(p=>{
+          const title=p.title||"";
+          return title && card.innerText.includes(title);
+        });
+      }
+
+      if(!post || !post.expiredAt) return;
+
+      const txt=expText(post.expiredAt);
+      if(!txt) return;
+
+      const el=document.createElement("div");
+      el.className="expText "+(txt==="Expired"?"expired":"");
+      el.innerText="⏳ "+txt;
+
+      const titleBox=card.querySelector("h3,h2,b,.title") || card;
+      titleBox.insertAdjacentElement("afterend",el);
+    });
+  }
+
+  const oldRender=window.render;
+  if(typeof oldRender==="function"){
+    window.render=function(){
+      oldRender.apply(this,arguments);
+      setTimeout(paintExpiredAll,100);
+    };
+  }
+
+  setInterval(paintExpiredAll,2000);
+  setTimeout(paintExpiredAll,500);
+})();
+</script>
+
+
+<script id="EXPIRED_FORCE_SHOW_ALL">
+(function(){
+  function left(expiredAt){
+    if(!expiredAt) return "";
+    const diff=new Date(expiredAt).getTime()-Date.now();
+    if(isNaN(diff)) return "";
+    if(diff<=0) return "Expired";
+    const m=Math.floor(diff/60000);
+    const h=Math.floor(m/60);
+    const d=Math.floor(h/24);
+    if(d>0) return d+" hari lagi";
+    if(h>0) return h+" jam lagi";
+    return Math.max(m,1)+" menit lagi";
+  }
+
+  async function paint(){
+    const res=await fetch("/api/posts?t="+Date.now());
+    const posts=await res.json().catch(()=>[]);
+
+    document.querySelectorAll(".expText").forEach(e=>e.remove());
+
+    const cards=[...document.querySelectorAll(".card")];
+
+    cards.forEach(card=>{
+      const text=card.innerText || "";
+
+      const post=posts.find(p=>{
+        const title=(p.title||"").trim();
+        return title && text.includes(title);
+      });
+
+      if(!post || !post.expiredAt) return;
+
+      const txt=left(post.expiredAt);
+      if(!txt) return;
+
+      const el=document.createElement("div");
+      el.className="expText "+(txt==="Expired"?"expired":"");
+      el.innerText="⏳ "+txt;
+
+      const titleEl=[...card.querySelectorAll("*")].find(x=>
+        (x.innerText||"").trim()===(post.title||"").trim()
+      );
+
+      if(titleEl){
+        titleEl.insertAdjacentElement("afterend",el);
+      }else{
+        card.appendChild(el);
+      }
+    });
+  }
+
+  setInterval(paint,2000);
+  setTimeout(paint,500);
+})();
+</script>
+
+<a class="waJoin" href="https://whatsapp.com/channel/0029VbCY6hW1XquepwA9xR2n" target="_blank">📢 Join WA</a>
+
 </body>
 </html>
 

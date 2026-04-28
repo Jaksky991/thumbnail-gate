@@ -1185,7 +1185,8 @@ app.post("/api/admin/comments/:postId/:index/reply",(req,res)=>{
 });
 
 
-// ===== ADMIN UPLOAD VIDEO MAX 9 =====
+
+// ===== ADMIN UPLOAD VIDEO MAX 9 - 1 THUMBNAIL 1 POST =====
 const adminUpload = multer({
   dest: path.join(__dirname,"uploads"),
   limits:{ fileSize: 300 * 1024 * 1024 }
@@ -1208,7 +1209,7 @@ app.post("/api/admin/upload-final",
 
     if(!acc) return res.status(403).json({message:"Admin tidak aktif"});
 
-    const {title,desc,type,key}=req.body||{};
+    const {title,desc,type,key,expiredHours}=req.body||{};
     const thumb=req.files?.thumb?.[0];
     const videos=req.files?.videos||[];
 
@@ -1218,32 +1219,38 @@ app.post("/api/admin/upload-final",
     if(videos.length>9) return res.status(400).json({message:"Maksimal 9 video"});
 
     const posts=readPosts();
-    const created=[];
 
-    videos.forEach((v,i)=>{
-      const id=Date.now().toString()+Math.floor(Math.random()*9999);
-      const post={
-        id,
-        title: videos.length>1 ? `${title} ${i+1}` : title,
-        desc:desc||"",
-        type:type||"public",
-        key:key||"",
-        thumb:"/uploads/"+thumb.filename,
-        video:"/uploads/"+v.filename,
-        views:0,
-        likes:0,
-        unlikes:0,
-        downloads:0,
-        comments:[],
-        createdAt:new Date().toISOString(),
-        uploader:adminName
-      };
-      posts.unshift(post);
-      created.push(post);
-    });
+    const videoUrls=videos.map(v=>"/uploads/"+v.filename);
 
+    const post={
+      id:Date.now().toString()+Math.floor(Math.random()*9999),
+      title:String(title).trim(),
+      desc:desc||"",
+      type:type||"public",
+      key:key||"",
+      thumb:"/uploads/"+thumb.filename,
+      thumbnail:"/uploads/"+thumb.filename,
+
+      // penting: 1 post isi banyak video
+      video:videoUrls[0],
+      videos:videoUrls,
+
+      views:0,
+      likes:0,
+      unlikes:0,
+      downloads:0,
+      comments:[],
+      createdAt:new Date().toISOString(),
+      uploader:adminName,
+      expiredAt: expiredHours
+        ? new Date(Date.now() + Number(expiredHours)*60*60*1000).toISOString()
+        : ""
+    };
+
+    posts.unshift(post);
     writePosts(posts);
-    res.json({ok:true,count:created.length,posts:created});
+
+    res.json({ok:true,count:videos.length,post});
   }
 );
 
