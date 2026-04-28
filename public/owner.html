@@ -108,18 +108,24 @@ async function loadAccounts(){
   }).join("") || "Belum ada akun";
 }
 
+
 async function setStatus(n,st){
-  await fetch("/api/owner/accounts-final/"+encodeURIComponent(n)+"/status",{
+  const r=await fetch("/api/owner/status/"+encodeURIComponent(n),{
     method:"PATCH",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({status:st})
   });
-  toastMsg("Status diubah");
+
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) return toastMsg(d.message||"Gagal ubah status");
+
+  toastMsg("Status jadi "+st);
   loadAccounts();
 }
 
+
 async function delAcc(n){
-  await fetch("/api/owner/accounts-final/"+encodeURIComponent(n),{method:"DELETE"});
+  await fetch("/api/owner/set-status-final/"+encodeURIComponent(n),{method:"DELETE"});
   toastMsg("Akun dihapus");
   loadAccounts();
 }

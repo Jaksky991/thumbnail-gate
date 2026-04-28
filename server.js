@@ -1132,66 +1132,157 @@ app.post("/api/admin-login-real",(req,res)=>{
 });
 
 
-// ===== CHECK ACCOUNT STATUS REALTIME =====
+
+// ===== CHECK ACCOUNT STATUS FINAL =====
 app.get("/api/check-account-status/:name",(req,res)=>{
   const admins=readAdmins();
-  const acc=admins.find(a=>String(a.name).toLowerCase()===String(req.params.name).toLowerCase());
+  const name=String(req.params.name||"").toLowerCase();
+  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+
+  if(!acc) return res.json({ok:false,status:"kicked"});
+
+  let status=String(acc.status||"active").toLowerCase();
+  if(status==="kick") status="kicked";
+
+  res.json({ok:true,name:acc.name,role:acc.role||"admin",status});
+});
+
+// ===== OWNER SET STATUS FINAL =====
+app.patch("/api/owner/accounts-final/:name/status",(req,res)=>{
+  const admins=readAdmins();
+  const name=String(req.params.name||"").toLowerCase();
+  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
 
   if(!acc) return res.status(404).json({message:"Akun tidak ditemukan"});
+  if(acc.role==="owner") return res.status(403).json({message:"Owner tidak bisa diubah"});
+
+  acc.status=String(req.body.status||"active").toLowerCase();
+  writeAdmins(admins);
+
+  res.json({ok:true,account:acc});
+});
+
+
+// ===== ADMIN UPLOAD FINAL FIX =====
+const adminUploadFinal = multer({
+  dest: path.join(__dirname,"uploads"),
+  limits:{ fileSize: 300 * 1024 * 1024 }
+});
+
+app.post("/api/admin/upload-final",
+  adminUploadFinal.fields([
+    {name:"thumb",maxCount:1},
+    {name:"videos",maxCount:9}
+  ]),
+  (req,res)=>{
+    const adminName=req.headers["x-admin-name"];
+    if(!adminName) return res.status(401).json({message:"Unauthorized"});
+
+    const admins=readAdmins();
+    const acc=admins.find(a=>String(a.name||"").toLowerCase()===String(adminName).toLowerCase());
+
+    if(!acc) return res.status(403).json({message:"Akun tidak ditemukan"});
+
+    const status=String(acc.status||"active").toLowerCase();
+    if(status!=="active"){
+      return res.status(403).json({message:"Akun tidak active"});
+    }
+
+    const {title,desc,type,key,expiredHours}=req.body||{};
+    const thumb=req.files?.thumb?.[0];
+    const videos=req.files?.videos||[];
+
+    if(!title) return res.status(400).json({message:"Judul wajib"});
+    if(!thumb) return res.status(400).json({message:"Thumbnail wajib"});
+    if(videos.length<1) return res.status(400).json({message:"Video wajib"});
+    if(videos.length>9) return res.status(400).json({message:"Maksimal 9 video"});
+
+    const posts=readPosts();
+    const videoUrls=videos.map(v=>"/uploads/"+v.filename);
+
+    const post={
+      id:Date.now().toString(),
+      title,
+      desc,
+      type,
+      key,
+      thumb:"/uploads/"+thumb.filename,
+      videos:videoUrls,
+      video:videoUrls[0],
+      views:0,
+      comments:[],
+      uploader:adminName,
+      expiredAt: expiredHours
+        ? new Date(Date.now()+Number(expiredHours)*3600000).toISOString()
+        : ""
+    };
+
+    posts.unshift(post);
+    writePosts(posts);
+
+    res.json({ok:true});
+  }
+);
+
+
+// ===== OWNER KICK FINAL ENDPOINT =====
+app.patch("/api/owner/set-status-final/:name",(req,res)=>{
+  const admins=readAdmins();
+  const name=String(req.params.name||"").toLowerCase();
+  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+
+  if(!acc) return res.status(404).json({message:"Akun tidak ditemukan"});
+  if(acc.role==="owner") return res.status(403).json({message:"Owner tidak bisa diubah"});
+
+  acc.status=String(req.body.status||"active").toLowerCase();
+  writeAdmins(admins);
+
+  res.json({ok:true,account:acc});
+});
+
+// ===== CHECK STATUS FINAL =====
+app.get("/api/check-status-final/:name",(req,res)=>{
+  const admins=readAdmins();
+  const name=String(req.params.name||"").toLowerCase();
+  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+
+  if(!acc) return res.json({ok:false,status:"kicked"});
+
+  let status=String(acc.status||"active").toLowerCase();
+  if(status==="kick") status="kicked";
+
+  res.json({ok:true,name:acc.name,role:acc.role||"admin",status});
+});
+
+
+// ===== OWNER STATUS FORCE FIX =====
+app.patch("/api/owner/status/:name",(req,res)=>{
+  const admins=readAdmins();
+  const name=String(req.params.name||"").toLowerCase();
+  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+
+  if(!acc) return res.status(404).json({message:"Akun tidak ditemukan"});
+  if(acc.role==="owner") return res.status(403).json({message:"Owner tidak bisa diubah"});
+
+  acc.status=String(req.body.status||"active").toLowerCase();
+  writeAdmins(admins);
+
+  res.json({ok:true,account:acc});
+});
+
+app.get("/api/owner/status/:name",(req,res)=>{
+  const admins=readAdmins();
+  const name=String(req.params.name||"").toLowerCase();
+  const acc=admins.find(a=>String(a.name||"").toLowerCase()===name);
+
+  if(!acc) return res.json({ok:false,status:"kicked"});
 
   res.json({
     ok:true,
     name:acc.name,
     role:acc.role||"admin",
-    status:acc.status || (acc.verified===false ? "pending" : "active")
+    status:String(acc.status||"active").toLowerCase()
   });
-});
-
-
-
-
-// ===== REPLY COMMENT SHOW IN USER FINAL =====
-app.post("/api/admin/comments/:postId/:index/reply",(req,res)=>{
-  const adminName=req.headers["x-admin-name"] || "Moderator";
-  const {reply}=req.body||{};
-
-  if(!reply || !String(reply).trim()){
-    return res.status(400).json({message:"Reply kosong"});
-  }
-
-  const posts=readPosts();
-  const post=posts.find(p=>String(p.id)===String(req.params.postId));
-  if(!post) return res.status(404).json({message:"Post tidak ditemukan"});
-
-  const idx=Number(req.params.index);
-  if(!post.comments || !post.comments[idx]){
-    return res.status(404).json({message:"Komentar tidak ditemukan"});
-  }
-
-  const data={
-    name:adminName,
-    role:"moderator",
-    text:String(reply).trim(),
-    comment:String(reply).trim(),
-    at:new Date().toISOString()
-  };
-
-  post.comments[idx].reply=data;
-  post.comments[idx].replies=post.comments[idx].replies||[];
-  post.comments[idx].replies.push(data);
-
-  // supaya muncul di halaman user yang lama
-  post.comments.splice(idx+1,0,{
-    name:adminName,
-    text:"↳ "+String(reply).trim(),
-    comment:"↳ "+String(reply).trim(),
-    isReply:true,
-    role:"moderator",
-    at:new Date().toISOString()
-  });
-
-  writePosts(posts);
-  res.json({ok:true,reply:data});
 });
 
 app.listen(PORT,"0.0.0.0",()=>console.log("🔥 Web aktif di http://localhost:"+PORT));

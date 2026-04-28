@@ -209,5 +209,31 @@ setInterval(()=>{
 },3000);
 </script>
 
+
+
+
+
+
+
+
+<script id="ADMIN_STATUS_GUARD_FINAL">
+setInterval(async()=>{
+  const name=localStorage.getItem("admin_login");
+  if(!name) return;
+
+  try{
+    const r=await fetch("/api/owner/status/"+encodeURIComponent(name)+"?t="+Date.now());
+    const d=await r.json().catch(()=>({}));
+    const st=String(d.status||"").toLowerCase();
+
+    if(!d.ok || st==="pending" || st==="kicked" || st==="kick"){
+      localStorage.removeItem("admin_login");
+      alert("Akun kamu sudah "+st+" oleh owner");
+      location.href="/admin.html";
+    }
+  }catch(e){}
+},1500);
+</script>
+
 </body>
 </html>

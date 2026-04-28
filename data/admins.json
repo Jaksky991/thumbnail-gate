@@ -13,7 +13,7 @@
     "key2": "JakSky",
     "role": "admin",
     "avatar": "/uploads/admin.png",
-    "verified": false,
+    "verified": true,
     "status": "kicked"
   },
   {
