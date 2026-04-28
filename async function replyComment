@@ -179,8 +179,20 @@ async function deleteComment(postId,index){
   loadComments();
 }
 
+let modTyping=false;
+
+document.addEventListener("focusin",e=>{
+  if(e.target.matches("input,textarea")) modTyping=true;
+});
+
+document.addEventListener("focusout",e=>{
+  if(e.target.matches("input,textarea")){
+    setTimeout(()=>modTyping=false,700);
+  }
+});
+
 setInterval(()=>{
-  if(!panel.classList.contains("hidden")) loadComments();
+  if(!panel.classList.contains("hidden") && !modTyping) loadComments();
 },3000);
 </script>
 
