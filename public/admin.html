@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <title>Admin Login</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 *{box-sizing:border-box}
@@ -16,7 +16,6 @@ body{
   align-items:center;
   height:100vh;
 }
-
 .card{
   width:92%;
   max-width:380px;
@@ -26,7 +25,6 @@ body{
   box-shadow:0 15px 40px #ff3f9d40;
   text-align:center;
 }
-
 h2{
   margin:0 0 16px;
   background:linear-gradient(90deg,#ff3f9d,#ff7ac3);
@@ -34,7 +32,6 @@ h2{
   color:transparent;
   font-size:26px;
 }
-
 input{
   width:100%;
   padding:13px;
@@ -43,7 +40,6 @@ input{
   border:1px solid #ffc2dc;
   outline:none;
 }
-
 button{
   width:100%;
   padding:13px;
@@ -55,29 +51,42 @@ button{
   margin-top:10px;
   box-shadow:0 8px 20px #ff3f9d55;
 }
-
-button:active{
-  transform:scale(0.96);
+button:active{transform:scale(0.96)}
+.toast{
+  position:fixed;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  background:white;
+  color:#ff3f9d;
+  padding:12px 18px;
+  border-radius:999px;
+  box-shadow:0 10px 25px #0003;
+  display:none;
+  font-weight:900;
+  z-index:99;
 }
-
 .small{
   font-size:12px;
-  opacity:.6;
-  margin-top:10px;
+  opacity:.65;
+  margin-top:12px;
 }
 </style>
-
 </head>
 
-<body><div class="card"><h2>Login Admin 🔐</h2>Login Admin</h2>
+<body>
 
-<input id="name" placeholder="Nama">
-<input id="key" placeholder="Key">
+<div class="card">
+  <h2>Login Admin 🔐</h2>
 
-<button onclick="login()">Masuk</button>
+  <input id="name" placeholder="Nama akun">
+  <input id="key" placeholder="Key 1 / Key 2">
+
+  <button onclick="login()">Masuk</button>
+  <div class="small">Gunakan akun role admin / owner yang statusnya active</div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" class="toast"></div>
 
 <script>
 function show(msg){
@@ -86,8 +95,6 @@ function show(msg){
   t.style.display="block";
   setTimeout(()=>t.style.display="none",2000);
 }
-
-
 
 async function login(){
   const name=document.getElementById("name").value.trim();
@@ -102,6 +109,7 @@ async function login(){
   });
 
   const d=await r.json().catch(()=>({}));
+
   if(!r.ok) return show(d.message||"Login gagal");
 
   if(d.role!=="admin" && d.role!=="owner"){
@@ -109,11 +117,17 @@ async function login(){
   }
 
   localStorage.setItem("admin_login",d.name);
+  localStorage.setItem("adminName",d.name);
+  sessionStorage.setItem("admin_login",d.name);
+  sessionStorage.setItem("adminName",d.name);
+
   show("Login berhasil");
 
-  setTimeout(()=>location.href="/admin-panel.html",700);
+  setTimeout(()=>{
+    location.href="/admin-panel.html?v="+Date.now();
+  },700);
 }
 </script>
 
-</div></body>
+</body>
 </html>
