@@ -53,6 +53,8 @@ button{width:100%;border:0;border-radius:999px;background:linear-gradient(90deg,
 <div id="toast" class="toast"></div>
 
 <script>
+const API = "/api/owner-v2/accounts";
+
 function toastMsg(msg){
   toast.innerText=msg;
   toast.style.display="block";
@@ -82,7 +84,7 @@ async function saveAccount(){
     return toastMsg("Isi semua data");
   }
 
-  const r=await fetch("/api/owner/accounts-final",{
+  const r=await fetch(API,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify(data)
@@ -100,7 +102,7 @@ async function saveAccount(){
 }
 
 async function loadAccounts(){
-  const r=await fetch("/api/owner/accounts-final?t="+Date.now());
+  const r=await fetch(API+"?t="+Date.now());
   const data=await r.json().catch(()=>[]);
 
   accounts.innerHTML=data.map(a=>{
@@ -126,7 +128,7 @@ async function loadAccounts(){
 }
 
 async function setStatus(n,st){
-  const r=await fetch("/api/owner/accounts-final/"+encodeURIComponent(n)+"/status",{
+  const r=await fetch(API+"/"+encodeURIComponent(n)+"/status",{
     method:"PATCH",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({status:st})
@@ -142,7 +144,7 @@ async function setStatus(n,st){
 async function delAcc(n){
   if(!confirm("Hapus akun "+n+"?")) return;
 
-  const r=await fetch("/api/owner/accounts-final/"+encodeURIComponent(n),{
+  const r=await fetch(API+"/"+encodeURIComponent(n),{
     method:"DELETE"
   });
 
