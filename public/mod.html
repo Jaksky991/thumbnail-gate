@@ -4,36 +4,107 @@
 <meta charset="UTF-8">
 <title>Moderator Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:linear-gradient(135deg,#ffe1ef,#ffc1dc);color:#222}
-.top{background:white;padding:12px;border-bottom:2px solid #ff5bad;font-weight:900}
-.box{width:94%;max-width:820px;margin:22px auto;background:white;border-radius:24px;padding:22px;box-shadow:0 15px 35px #ff3f9d33}
-input{width:100%;padding:13px;margin:8px 0;border:1px solid #ffc2dc;border-radius:14px}
-button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 15px;font-weight:900;margin:6px 0}
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#ffe1ef,#ffc1dc);
+  color:#222;
+}
+.top{
+  background:white;
+  padding:12px;
+  border-bottom:2px solid #ff5bad;
+  font-weight:900;
+}
+.box{
+  width:94%;
+  max-width:820px;
+  margin:22px auto;
+  background:white;
+  border-radius:24px;
+  padding:22px;
+  box-shadow:0 15px 35px #ff3f9d33;
+}
+input{
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  border:1px solid #ffc2dc;
+  border-radius:14px;
+}
+button{
+  border:0;
+  border-radius:999px;
+  background:#ff3f9d;
+  color:white;
+  padding:11px 15px;
+  font-weight:900;
+  margin:6px 0;
+}
 .hidden{display:none!important}
-.comment{background:#fff6fb;border-left:5px solid #ff3f9d;border-radius:14px;padding:12px;margin:10px 0}
-.replyBox{background:#ffe8f4;padding:8px;border-radius:10px;margin-top:6px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:white;color:#ff3f9d;padding:12px 18px;border-radius:999px;box-shadow:0 10px 25px #0003;display:none;font-weight:900;z-index:99}
-.kickToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:white;color:#ff3f9d;padding:13px 18px;border-radius:999px;box-shadow:0 12px 30px #0004;font-weight:900;display:none}
+.comment{
+  background:#fff6fb;
+  border-left:5px solid #ff3f9d;
+  border-radius:14px;
+  padding:12px;
+  margin:10px 0;
+}
+.replyBox{
+  background:#ffe8f4;
+  padding:8px;
+  border-radius:10px;
+  margin-top:6px;
+}
+.toast{
+  position:fixed;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  background:white;
+  color:#ff3f9d;
+  padding:12px 18px;
+  border-radius:999px;
+  box-shadow:0 10px 25px #0003;
+  display:none;
+  font-weight:900;
+  z-index:99;
+}
+.kickToast{
+  position:fixed;
+  left:50%;
+  bottom:26px;
+  transform:translateX(-50%);
+  background:white;
+  color:#ff3f9d;
+  padding:13px 18px;
+  border-radius:999px;
+  box-shadow:0 12px 30px #0004;
+  font-weight:900;
+  display:none;
+  z-index:9999;
+}
 .kickToast.show{display:block}
 </style>
 </head>
+
 <body>
 
 <div class="top">🛡 Moderator Panel</div>
 
 <section class="box" id="loginBox">
-<h2>Login Moderator</h2>
-<input id="name" placeholder="Key 1">
-<input id="key" placeholder="Key 2">
-<button onclick="login()">Masuk</button>
+  <h2>Login Moderator</h2>
+  <input id="key1Input" placeholder="Key 1">
+  <input id="key2Input" placeholder="Key 2">
+  <button onclick="login()">Masuk</button>
 </section>
 
 <section class="box hidden" id="panel">
-<h2>Komentar User</h2>
-<div id="comments">Memuat...</div>
-<button onclick="logout()">Logout</button>
+  <h2>Komentar User</h2>
+  <div id="comments">Memuat...</div>
+  <button onclick="logout()">Logout</button>
 </section>
 
 <div id="toast" class="toast"></div>
@@ -41,9 +112,10 @@ button{border:0;border-radius:999px;background:#ff3f9d;color:white;padding:11px 
 
 <script>
 function show(msg){
-  toast.innerText=msg;
-  toast.style.display="block";
-  setTimeout(()=>toast.style.display="none",1800);
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1800);
 }
 
 function kickToast(msg){
@@ -53,12 +125,11 @@ function kickToast(msg){
   setTimeout(()=>t.classList.remove("show"),1800);
 }
 
-/* 🔥 LOGIN FIX (PAKAI SERVER KAMU) */
 async function login(){
-  const k1=name.value.trim();
-  const k2=key.value.trim();
+  const k1=document.getElementById("key1Input").value.trim();
+  const k2=document.getElementById("key2Input").value.trim();
 
-  if(!k1||!k2) return show("Isi key");
+  if(!k1||!k2) return show("Isi Key 1 dan Key 2");
 
   const r=await fetch("/api/role-login",{
     method:"POST",
@@ -72,18 +143,22 @@ async function login(){
 
   const d=await r.json().catch(()=>({}));
 
-  if(!r.ok) return show(d.message||"Login gagal");
+  if(!r.ok){
+    return show(d.message || "Login gagal / akun belum active");
+  }
 
-  sessionStorage.setItem("mod_login",d.adminName || "Moderator");
-  sessionStorage.setItem("mod_role",d.adminRole || "moderator");
+  sessionStorage.setItem("mod_login",d.adminName || d.admin?.name || "Moderator");
+  sessionStorage.setItem("mod_role",d.adminRole || d.admin?.role || "moderator");
 
-  loginBox.classList.add("hidden");
-  panel.classList.remove("hidden");
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("panel").classList.remove("hidden");
+
   loadComments();
 }
 
 function logout(){
-  sessionStorage.clear();
+  sessionStorage.removeItem("mod_login");
+  sessionStorage.removeItem("mod_role");
   location.reload();
 }
 
@@ -100,11 +175,12 @@ async function loadComments(){
         <small>${p.title||"Video"}</small>
         <p>${c.text||c.comment||""}</p>
 
-        ${(c.replies||[]).map(r=>`
-        <div class="replyBox">
-          <b>${r.name||"Moderator"}</b>
-          <p>${r.text||r.comment||""}</p>
-        </div>`).join("")}
+        ${(c.replies||[]).map(rep=>`
+          <div class="replyBox">
+            <b>${rep.name||"Moderator"}</b>
+            <p>${rep.text||rep.comment||""}</p>
+          </div>
+        `).join("")}
 
         <button onclick="deleteComment('${p.id}',${i})">Hapus</button>
 
@@ -114,30 +190,31 @@ async function loadComments(){
     });
   });
 
-  comments.innerHTML=html||"Belum ada komentar";
+  document.getElementById("comments").innerHTML=html || "Belum ada komentar";
 }
 
-/* 🔥 REPLY FIX */
 async function replyComment(postId,index){
   const inp=document.getElementById("reply_"+postId+"_"+index);
-  const reply=inp.value.trim();
+  const reply=inp ? inp.value.trim() : "";
+
   if(!reply) return show("Isi dulu");
 
   const r=await fetch("/api/admin/posts/"+postId+"/comments/"+index+"/reply",{
     method:"POST",
     headers:{
       "Content-Type":"application/json",
-      "x-admin-name":sessionStorage.getItem("mod_login")||"Moderator"
+      "x-admin-name":sessionStorage.getItem("mod_login") || "Moderator"
     },
     body:JSON.stringify({
       text:reply,
-      adminName:sessionStorage.getItem("mod_login")||"Moderator",
+      adminName:sessionStorage.getItem("mod_login") || "Moderator",
       role:"moderator"
     })
   });
 
   const d=await r.json().catch(()=>({}));
-  if(!r.ok) return show(d.message||"Gagal");
+
+  if(!r.ok) return show(d.message || "Gagal reply");
 
   inp.value="";
   show("Reply terkirim");
@@ -147,45 +224,50 @@ async function replyComment(postId,index){
 async function deleteComment(postId,index){
   const r=await fetch("/api/admin/comment/"+postId+"/"+index,{
     method:"DELETE",
-    headers:{"x-admin-name":sessionStorage.getItem("mod_login")||""}
+    headers:{
+      "x-admin-name":sessionStorage.getItem("mod_login") || ""
+    }
   });
 
   if(!r.ok) return show("Gagal hapus");
+
   show("Dihapus");
   loadComments();
 }
 
-/* 🔥 ANTI ILANG SAAT NGETIK */
+/* anti teks hilang pas ngetik */
 let modTyping=false;
 
 document.addEventListener("focusin",e=>{
-  if(e.target.matches("input")) modTyping=true;
+  if(e.target.matches("input,textarea")) modTyping=true;
 });
 
 document.addEventListener("focusout",e=>{
-  if(e.target.matches("input")){
+  if(e.target.matches("input,textarea")){
     setTimeout(()=>modTyping=false,700);
   }
 });
 
 setInterval(()=>{
+  const panel=document.getElementById("panel");
   if(!panel.classList.contains("hidden") && !modTyping){
     loadComments();
   }
 },3000);
 
-/* 🔥 CEK STATUS */
+/* cek status moderator */
 setInterval(async()=>{
   const n=sessionStorage.getItem("mod_login");
   if(!n) return;
 
-  const r=await fetch("/api/check-account-status/"+n);
+  const r=await fetch("/api/check-account-status/"+encodeURIComponent(n)+"?t="+Date.now());
   const d=await r.json().catch(()=>({}));
 
-  if(!r.ok || d.status!=="active"){
-    sessionStorage.clear();
-    kickToast("Akun kamu di kick");
-    setTimeout(()=>location.href="/mod.html",1000);
+  if(!r.ok || String(d.status||"").toLowerCase()!=="active"){
+    sessionStorage.removeItem("mod_login");
+    sessionStorage.removeItem("mod_role");
+    kickToast("Akun kamu tidak aktif / dikick owner");
+    setTimeout(()=>location.href="/mod.html?v=kick",1000);
   }
 },2000);
 </script>
