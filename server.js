@@ -620,7 +620,75 @@ app.get("/api/check-account-status/:name", (req, res) => {
     status: String(acc.status || "active").toLowerCase()
   });
 });
+// ===== LIKE / UNLIKE TOGGLE FINAL ANTI BARENG =====
+function getReactUid(req){
+  return String(
+    req.headers["x-user-id"] ||
+    req.body?.userId ||
+    req.ip ||
+    "user"
+  ).replace(/[^a-zA-Z0-9_-]/g,"_");
+}
 
+app.post("/api/react-like/:id",(req,res)=>{
+  const posts=readPosts();
+  const post=posts.find(p=>String(p.id)===String(req.params.id));
+
+  if(!post){
+    return res.status(404).json({message:"Post tidak ditemukan"});
+  }
+
+  const u=getReactUid(req);
+
+  post.likedBy=post.likedBy || {};
+  post.unlikedBy=post.unlikedBy || {};
+
+  // Kalau sudah like, klik lagi = batal like
+  if(post.likedBy[u]){
+    delete post.likedBy[u];
+  }else{
+    // Like aktif, unlike otomatis mati
+    post.likedBy[u]=true;
+    delete post.unlikedBy[u];
+  }
+
+  post.likes=Object.keys(post.likedBy).length;
+  post.unlikes=Object.keys(post.unlikedBy).length;
+  post.dislikes=post.unlikes;
+
+  writePosts(posts);
+  res.json(post);
+});
+
+app.post("/api/react-unlike/:id",(req,res)=>{
+  const posts=readPosts();
+  const post=posts.find(p=>String(p.id)===String(req.params.id));
+
+  if(!post){
+    return res.status(404).json({message:"Post tidak ditemukan"});
+  }
+
+  const u=getReactUid(req);
+
+  post.likedBy=post.likedBy || {};
+  post.unlikedBy=post.unlikedBy || {};
+
+  // Kalau sudah unlike, klik lagi = batal unlike
+  if(post.unlikedBy[u]){
+    delete post.unlikedBy[u];
+  }else{
+    // Unlike aktif, like otomatis mati
+    post.unlikedBy[u]=true;
+    delete post.likedBy[u];
+  }
+
+  post.likes=Object.keys(post.likedBy).length;
+  post.unlikes=Object.keys(post.unlikedBy).length;
+  post.dislikes=post.unlikes;
+
+  writePosts(posts);
+  res.json(post);
+});
 /* =========================
    START SERVER
 ========================= */
