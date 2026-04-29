@@ -1,160 +1,632 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<title>Owner Panel</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:linear-gradient(135deg,#ff9bdc,#ffc2e2,#ffe1ef);min-height:100vh;color:#222}
-.box{width:94%;max-width:760px;margin:24px auto;background:white;border-radius:24px;padding:24px;box-shadow:0 15px 35px #ff3f9d33}
-#loginBox{max-width:390px;margin-top:28vh;text-align:center}
-h2{color:#ff3f9d}
-input,select{width:100%;padding:13px;margin:8px 0 12px;border:1px solid #ffc2dc;border-radius:14px}
-button{width:100%;border:0;border-radius:999px;background:linear-gradient(90deg,#ff3f9d,#ff7ac3);color:white;padding:12px;font-weight:900;margin:6px 0}
-.hidden{display:none!important}
-.acc{background:#fff6fb;border:1px solid #ffd1e5;border-radius:16px;padding:12px;margin:10px 0}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.badge{font-size:11px;border-radius:99px;padding:4px 8px;color:white;font-weight:900}
-.role{background:#1d9bf0}
-.active{background:#22c55e}
-.pending{background:#f59e0b}
-.kicked{background:#ef4444}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:white;color:#ff3f9d;padding:12px 18px;border-radius:999px;box-shadow:0 10px 25px #0003;display:none;font-weight:900;z-index:99}
-</style>
-</head>
+require("dotenv").config();
 
-<body>
+const express = require("express");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const cors = require("cors");
 
-<section class="box" id="loginBox">
-<h2>Login Owner 👑</h2>
-<input id="owner1" placeholder="Owner key 1">
-<input id="owner2" placeholder="Owner key 2">
-<button onclick="loginOwner()">Masuk</button>
-</section>
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-<section class="box hidden" id="panel">
-<h2>Buat Akun</h2>
-<input id="accName" placeholder="Nama akun">
-<input id="key1" placeholder="Key 1">
-<input id="key2" placeholder="Key 2">
+const DATA_DIR = path.join(__dirname, "data");
+const UPLOAD_DIR = path.join(__dirname, "uploads");
+const PUBLIC_DIR = path.join(__dirname, "public");
 
-<select id="role">
-<option value="admin">Admin</option>
-<option value="moderator">Moderator</option>
-</select>
+const POSTS_FILE = path.join(DATA_DIR, "posts.json");
+const ADMINS_FILE = path.join(DATA_DIR, "admins.json");
 
-<button onclick="saveAccount()">Simpan</button>
+fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 
-<h2>Daftar Akun</h2>
-<div id="accounts">Memuat...</div>
-</section>
+app.use(cors());
+app.use(express.json({ limit: "1gb" }));
+app.use(express.urlencoded({ extended: true, limit: "1gb" }));
 
-<div id="toast" class="toast"></div>
+app.use((req, res, next) => {
+  req.setTimeout(0);
+  res.setTimeout(0);
+  next();
+});
 
-<script>
-const API = "/api/owner-v2/accounts";
+app.use("/uploads", express.static(UPLOAD_DIR));
+app.use(express.static(PUBLIC_DIR));
 
-function toastMsg(msg){
-  toast.innerText=msg;
-  toast.style.display="block";
-  setTimeout(()=>toast.style.display="none",1800);
+function readJson(file, def) {
+  try {
+    if (!fs.existsSync(file)) {
+      fs.writeFileSync(file, JSON.stringify(def, null, 2));
+    }
+    return JSON.parse(fs.readFileSync(file, "utf8") || JSON.stringify(def));
+  } catch (e) {
+    return def;
+  }
 }
 
-function loginOwner(){
-  if(owner1.value.trim()!=="Jaksky" || owner2.value.trim()!=="Jaksky"){
-    return toastMsg("Owner key salah");
+function writeJson(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+function readPosts() {
+  return readJson(POSTS_FILE, []);
+}
+
+function writePosts(data) {
+  writeJson(POSTS_FILE, data);
+}
+
+function readAdmins() {
+  return readJson(ADMINS_FILE, [
+    {
+      name: "Owner",
+      key1: "xyron",
+      key2: "store123",
+      role: "owner",
+      status: "active",
+      verified: true,
+      avatar: "/uploads/admin.png"
+    }
+  ]);
+}
+
+function writeAdmins(data) {
+  writeJson(ADMINS_FILE, data);
+}
+
+function uid(req) {
+  return String(
+    req.headers["x-user-id"] ||
+    req.body?.userId ||
+    req.body?.deviceId ||
+    req.ip ||
+    "user"
+  ).replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function findPost(id) {
+  const posts = readPosts();
+  const post = posts.find(p => String(p.id) === String(id));
+  return { posts, post };
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "");
+      const safe = Date.now() + "-" + Math.random().toString(36).slice(2) + ext;
+      cb(null, safe);
+    }
+  }),
+  limits: {
+    fileSize: 300 * 1024 * 1024
+  }
+});
+
+/* =========================
+   POSTS
+========================= */
+
+app.get("/api/posts", (req, res) => {
+  res.json(readPosts());
+});
+
+app.get("/api/admin/posts", (req, res) => {
+  res.json(readPosts());
+});
+
+/* =========================
+   UPLOAD
+========================= */
+
+function handleUpload(req, res) {
+  try {
+    const posts = readPosts();
+
+    const thumb =
+      req.files?.thumbnail?.[0] ||
+      req.files?.thumb?.[0] ||
+      req.files?.image?.[0];
+
+    const videoFiles =
+      req.files?.video ||
+      req.files?.videos ||
+      [];
+
+    const videos = videoFiles.map(v => "/uploads/" + v.filename);
+
+    if (!thumb) {
+      return res.status(400).json({ message: "Thumbnail wajib dipilih" });
+    }
+
+    if (!videos.length) {
+      return res.status(400).json({ message: "Video wajib dipilih" });
+    }
+
+    if (videos.length > 9) {
+      return res.status(400).json({ message: "Maksimal 9 video" });
+    }
+
+    const expiredHours = Number(req.body.expiredHours || 0);
+
+    const post = {
+      id: Date.now().toString(),
+      title: req.body.title || "Video",
+      desc: req.body.desc || "",
+      type: req.body.type || "public",
+      key: req.body.key || "",
+      thumb: "/uploads/" + thumb.filename,
+      thumbnail: "/uploads/" + thumb.filename,
+      video: videos[0],
+      videos,
+      views: 0,
+      likes: 0,
+      unlikes: 0,
+      dislikes: 0,
+      downloads: 0,
+      rating: 0,
+      ratingAvg: "0.0",
+      ratingCount: 0,
+      comments: [],
+      uploader: req.headers["x-admin-name"] || req.body.adminName || "Admin",
+      createdAt: new Date().toISOString(),
+      expiredAt: expiredHours
+        ? new Date(Date.now() + expiredHours * 60 * 60 * 1000).toISOString()
+        : ""
+    };
+
+    posts.unshift(post);
+    writePosts(posts);
+
+    return res.json({ ok: true, post });
+  } catch (e) {
+    return res.status(500).json({ message: "Upload gagal", error: e.message });
+  }
+}
+
+app.post("/api/upload", upload.fields([
+  { name: "thumbnail", maxCount: 1 },
+  { name: "thumb", maxCount: 1 },
+  { name: "image", maxCount: 1 },
+  { name: "video", maxCount: 9 },
+  { name: "videos", maxCount: 9 }
+]), handleUpload);
+
+app.post("/api/admin/upload-final", upload.fields([
+  { name: "thumbnail", maxCount: 1 },
+  { name: "thumb", maxCount: 1 },
+  { name: "image", maxCount: 1 },
+  { name: "video", maxCount: 9 },
+  { name: "videos", maxCount: 9 }
+]), handleUpload);
+
+/* =========================
+   USER ACTIONS
+========================= */
+
+app.post("/api/posts/:id/view", (req, res) => {
+  const { posts, post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const u = uid(req);
+  post.viewedBy = post.viewedBy || {};
+
+  if (!post.viewedBy[u]) {
+    post.viewedBy[u] = true;
+    post.views = Number(post.views || 0) + 1;
   }
 
-  loginBox.classList.add("hidden");
-  panel.classList.remove("hidden");
-  loadAccounts();
-}
+  writePosts(posts);
+  res.json(post);
+});
 
-async function saveAccount(){
-  const data={
-    name:accName.value.trim(),
-    key1:key1.value.trim(),
-    key2:key2.value.trim(),
-    role:role.value,
-    status:"active"
+app.post("/api/view/:id", (req, res) => {
+  req.url = "/api/posts/" + req.params.id + "/view";
+  app._router.handle(req, res);
+});
+
+app.post("/api/posts/:id/like", (req, res) => {
+  const { posts, post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const u = uid(req);
+  post.likedBy = post.likedBy || {};
+
+  if (!post.likedBy[u]) {
+    post.likedBy[u] = true;
+    post.likes = Number(post.likes || 0) + 1;
+  }
+
+  writePosts(posts);
+  res.json(post);
+});
+
+app.post("/api/posts/:id/dislike", (req, res) => {
+  const { posts, post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const u = uid(req);
+  post.unlikedBy = post.unlikedBy || {};
+
+  if (!post.unlikedBy[u]) {
+    post.unlikedBy[u] = true;
+    post.unlikes = Number(post.unlikes || post.dislikes || 0) + 1;
+    post.dislikes = post.unlikes;
+  }
+
+  writePosts(posts);
+  res.json(post);
+});
+
+app.post("/api/posts/:id/rating", (req, res) => {
+  const { posts, post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const val = Number(req.body.rating || req.body.value || req.body.star || 0);
+  if (val < 1 || val > 5) {
+    return res.status(400).json({ message: "Rating salah" });
+  }
+
+  const u = uid(req);
+  post.ratingBy = post.ratingBy || {};
+  post.ratingBy[u] = val;
+
+  const vals = Object.values(post.ratingBy).map(Number);
+  post.ratingCount = vals.length;
+  post.rating = vals.reduce((a, b) => a + b, 0) / vals.length;
+  post.ratingAvg = post.rating.toFixed(1);
+
+  writePosts(posts);
+  res.json(post);
+});
+
+app.post("/api/posts/:id/comment", (req, res) => {
+  const { posts, post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const text = String(req.body.text || req.body.comment || "").trim();
+  const name = String(req.body.name || "User").trim();
+
+  if (!text) return res.status(400).json({ message: "Komentar kosong" });
+
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+
+  post.comments.push({
+    id: Date.now().toString(),
+    name,
+    text,
+    comment: text,
+    userId: uid(req),
+    replies: [],
+    createdAt: new Date().toISOString()
+  });
+
+  writePosts(posts);
+  res.json(post);
+});
+
+app.post("/api/comment/:id", (req, res) => {
+  req.url = "/api/posts/" + req.params.id + "/comment";
+  app._router.handle(req, res);
+});
+
+app.post("/api/posts/:id/download", (req, res) => {
+  const { posts, post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  post.downloads = Number(post.downloads || 0) + 1;
+  writePosts(posts);
+  res.json(post);
+});
+
+app.post("/api/download/:id", (req, res) => {
+  req.url = "/api/posts/" + req.params.id + "/download";
+  app._router.handle(req, res);
+});
+
+app.post("/api/unlock/:id", (req, res) => {
+  const { post } = findPost(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const input = String(req.body.key || req.body.password || req.body.vipKey || "").trim();
+  const real = String(post.key || post.vipKey || post.password || "").trim();
+
+  if (real && input !== real) {
+    return res.status(401).json({ message: "Kunci salah" });
+  }
+
+  res.json({
+    ok: true,
+    post,
+    video: post.video || (post.videos && post.videos[0]) || "",
+    videos: post.videos || (post.video ? [post.video] : [])
+  });
+});
+
+/* =========================
+   ADMIN / MOD COMMENTS
+========================= */
+
+app.post("/api/admin/posts/:postId/comments/:i/reply", (req, res) => {
+  const posts = readPosts();
+  const post = posts.find(p => String(p.id) === String(req.params.postId));
+
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+  const comment = post.comments[Number(req.params.i)];
+
+  if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
+
+  const text = String(req.body.text || req.body.reply || req.body.comment || "").trim();
+  if (!text) return res.status(400).json({ message: "Reply kosong" });
+
+  const reply = {
+    id: Date.now().toString(),
+    name: req.body.adminName || req.headers["x-admin-name"] || "Moderator",
+    text,
+    comment: text,
+    role: req.body.role || "moderator",
+    isAdmin: true,
+    createdAt: new Date().toISOString()
   };
 
-  if(!data.name||!data.key1||!data.key2){
-    return toastMsg("Isi semua data");
+  comment.replies = Array.isArray(comment.replies) ? comment.replies : [];
+  comment.replies.push(reply);
+
+  writePosts(posts);
+
+  res.json({
+    ok: true,
+    post,
+    comments: post.comments
+  });
+});
+
+app.post("/api/admin/comments/:postId/:i/reply", (req, res) => {
+  req.url = "/api/admin/posts/" + req.params.postId + "/comments/" + req.params.i + "/reply";
+  app._router.handle(req, res);
+});
+
+app.delete("/api/admin/comment/:postId/:i", (req, res) => {
+  const posts = readPosts();
+  const post = posts.find(p => String(p.id) === String(req.params.postId));
+
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+  const i = Number(req.params.i);
+
+  if (!post.comments[i]) {
+    return res.status(404).json({ message: "Komentar tidak ditemukan" });
   }
 
-  const r=await fetch(API,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(data)
+  post.comments.splice(i, 1);
+  writePosts(posts);
+
+  res.json({ ok: true, post });
+});
+
+app.delete("/api/admin/delete-comment/:postId/:i", (req, res) => {
+  req.url = "/api/admin/comment/" + req.params.postId + "/" + req.params.i;
+  app._router.handle(req, res);
+});
+
+app.delete("/api/admin/posts/:id", (req, res) => {
+  const posts = readPosts().filter(p => String(p.id) !== String(req.params.id));
+  writePosts(posts);
+  res.json({ ok: true });
+});
+
+/* =========================
+   LOGIN
+========================= */
+
+app.post("/api/role-login", (req, res) => {
+  const { key1, key2, role } = req.body || {};
+
+  const acc = readAdmins().find(a =>
+    String(a.key1 || "").trim() === String(key1 || "").trim() &&
+    String(a.key2 || "").trim() === String(key2 || "").trim() &&
+    (!role || String(a.role || "").toLowerCase() === String(role).toLowerCase())
+  );
+
+  if (!acc) return res.status(401).json({ message: "Login salah" });
+
+  const status = String(acc.status || "active").toLowerCase();
+  if (status !== "active") {
+    return res.status(403).json({ message: "Akun tidak active" });
+  }
+
+  res.json({
+    ok: true,
+    admin: acc,
+    adminName: acc.name,
+    adminRole: acc.role
+  });
+});
+
+app.post("/api/admin-login-real", (req, res) => {
+  const { name, key } = req.body || {};
+  const target = String(name || "").trim().toLowerCase();
+
+  const acc = readAdmins().find(a =>
+    String(a.name || "").trim().toLowerCase() === target
+  );
+
+  if (!acc) return res.status(404).json({ message: "Akun tidak ditemukan" });
+
+  const status = String(acc.status || "active").toLowerCase();
+  if (status !== "active") {
+    return res.status(403).json({ message: "Akun tidak active" });
+  }
+
+  const okKey =
+    String(acc.key1 || "") === String(key || "") ||
+    String(acc.key2 || "") === String(key || "");
+
+  if (!okKey) return res.status(401).json({ message: "Key salah" });
+
+  res.json({
+    ok: true,
+    name: acc.name,
+    role: acc.role || "admin",
+    status
+  });
+});
+
+/* =========================
+   OWNER V2
+========================= */
+
+app.get("/api/owner-v2/accounts", (req, res) => {
+  const admins = readAdmins();
+
+  res.json(admins.map(a => ({
+    name: a.name,
+    key1: a.key1,
+    key2: a.key2,
+    role: a.role || "admin",
+    status: String(a.status || "active").toLowerCase()
+  })));
+});
+
+app.post("/api/owner-v2/accounts", (req, res) => {
+  const { name, key1, key2, role, status } = req.body || {};
+
+  if (!name || !key1 || !key2) {
+    return res.status(400).json({ message: "Nama, key1, key2 wajib" });
+  }
+
+  const admins = readAdmins();
+  const cleanName = String(name).trim();
+
+  const idx = admins.findIndex(a =>
+    String(a.name || "").toLowerCase() === cleanName.toLowerCase()
+  );
+
+  const acc = {
+    name: cleanName,
+    key1: String(key1).trim(),
+    key2: String(key2).trim(),
+    role: role || "admin",
+    status: String(status || "active").toLowerCase(),
+    verified: true
+  };
+
+  if (idx >= 0) {
+    if (String(admins[idx].role || "").toLowerCase() === "owner") {
+      return res.status(403).json({ message: "Owner tidak bisa diubah" });
+    }
+    admins[idx] = { ...admins[idx], ...acc };
+  } else {
+    admins.push(acc);
+  }
+
+  writeAdmins(admins);
+  res.json({ ok: true, account: acc });
+});
+
+app.patch("/api/owner-v2/accounts/:name/status", (req, res) => {
+  const admins = readAdmins();
+  const target = String(req.params.name || "").toLowerCase();
+
+  const acc = admins.find(a =>
+    String(a.name || "").toLowerCase() === target
+  );
+
+  if (!acc) return res.status(404).json({ message: "Akun tidak ditemukan" });
+
+  if (String(acc.role || "").toLowerCase() === "owner") {
+    return res.status(403).json({ message: "Owner tidak bisa diubah" });
+  }
+
+  acc.status = String(req.body.status || "active").toLowerCase();
+  writeAdmins(admins);
+
+  res.json({ ok: true, account: acc });
+});
+
+app.delete("/api/owner-v2/accounts/:name", (req, res) => {
+  const target = String(req.params.name || "").toLowerCase();
+  let admins = readAdmins();
+
+  const before = admins.length;
+
+  admins = admins.filter(a => {
+    if (String(a.role || "").toLowerCase() === "owner") return true;
+    return String(a.name || "").toLowerCase() !== target;
   });
 
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok) return toastMsg(d.message||"Gagal simpan");
+  if (admins.length === before) {
+    return res.status(404).json({ message: "Akun tidak ditemukan / tidak bisa dihapus" });
+  }
 
-  accName.value="";
-  key1.value="";
-  key2.value="";
+  writeAdmins(admins);
+  res.json({ ok: true });
+});
 
-  toastMsg("Akun tersimpan");
-  loadAccounts();
-}
+/* =========================
+   COMPAT OWNER OLD
+========================= */
 
-async function loadAccounts(){
-  const r=await fetch(API+"?t="+Date.now());
-  const data=await r.json().catch(()=>[]);
+app.get("/api/owner/accounts-final", (req, res) => {
+  const admins = readAdmins();
+  res.json(admins.map(a => ({
+    name: a.name,
+    role: a.role || "admin",
+    status: String(a.status || "active").toLowerCase()
+  })));
+});
 
-  accounts.innerHTML=data.map(a=>{
-    const st=(a.status||"active").toLowerCase();
-    const roleName=a.role||"admin";
-    const isOwner=roleName.toLowerCase()==="owner";
+app.post("/api/owner/accounts-final", (req, res) => {
+  req.url = "/api/owner-v2/accounts";
+  app._router.handle(req, res);
+});
 
-    return `
-    <div class="acc">
-      <b>${a.name}</b>
-      <span class="badge role">${roleName}</span>
-      <span class="badge ${st}">${st}</span>
+app.patch("/api/owner/accounts-final/:name/status", (req, res) => {
+  req.url = "/api/owner-v2/accounts/" + encodeURIComponent(req.params.name) + "/status";
+  app._router.handle(req, res);
+});
 
-      ${isOwner ? `<p>Owner tidak bisa diubah</p>` : `
-      <div class="row">
-        <button onclick="setStatus('${a.name}','active')">Active</button>
-        <button onclick="setStatus('${a.name}','pending')">Pending</button>
-        <button onclick="setStatus('${a.name}','kicked')">Kick</button>
-        <button onclick="delAcc('${a.name}')">Hapus</button>
-      </div>`}
-    </div>`;
-  }).join("") || "Belum ada akun";
-}
+app.delete("/api/owner/accounts-final/:name", (req, res) => {
+  req.url = "/api/owner-v2/accounts/" + encodeURIComponent(req.params.name);
+  app._router.handle(req, res);
+});
 
-async function setStatus(n,st){
-  const r=await fetch(API+"/"+encodeURIComponent(n)+"/status",{
-    method:"PATCH",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({status:st})
+/* =========================
+   ACCOUNT STATUS CHECK
+========================= */
+
+app.get("/api/check-account-status/:name", (req, res) => {
+  const target = String(req.params.name || "").toLowerCase();
+
+  const acc = readAdmins().find(a =>
+    String(a.name || "").toLowerCase() === target
+  );
+
+  if (!acc) {
+    return res.status(404).json({
+      ok: false,
+      status: "kicked"
+    });
+  }
+
+  res.json({
+    ok: true,
+    name: acc.name,
+    role: acc.role || "admin",
+    status: String(acc.status || "active").toLowerCase()
   });
+});
 
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok) return toastMsg(d.message||"Gagal ubah status");
+/* =========================
+   START SERVER
+========================= */
 
-  toastMsg("Status jadi "+st);
-  loadAccounts();
-}
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log("🔥 Web aktif di port", PORT);
+});
 
-async function delAcc(n){
-  if(!confirm("Hapus akun "+n+"?")) return;
-
-  const r=await fetch(API+"/"+encodeURIComponent(n),{
-    method:"DELETE"
-  });
-
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok) return toastMsg(d.message||"Gagal hapus");
-
-  toastMsg("Akun dihapus");
-  loadAccounts();
-}
-</script>
-
-</body>
-</html>
+server.timeout = 0;
