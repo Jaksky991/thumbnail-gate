@@ -993,17 +993,34 @@ function sendComment(){
     return;
   }
 
+  var btn = document.querySelector(".sendBtn");
+  if(btn){
+    btn.disabled = true;
+    btn.innerText = "Mengirim...";
+  }
+
   apiPost("/api/posts/" + active.id + "/comment",{
     name:name,
     text:text,
     userId:uid
   }).then(function(r){
-    if(!r.ok) return showToast(r.data.message || "Gagal komentar");
+    if(!r.ok){
+      showToast(r.data.message || "Gagal komentar");
+      return;
+    }
 
     active = r.data;
     document.getElementById("ctext").value = "";
+
     renderComments();
     load();
+
+    showToast("Komentar terkirim");
+  }).finally(function(){
+    if(btn){
+      btn.disabled = false;
+      btn.innerText = "Kirim Komentar";
+    }
   });
 }
 
