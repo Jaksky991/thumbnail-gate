@@ -7,6 +7,7 @@
 
 <style>
 *{box-sizing:border-box}
+
 html,body{
   margin:0;
   min-height:100%;
@@ -15,9 +16,12 @@ html,body{
   color:#222;
   overflow-x:hidden;
 }
-.hidden{display:none!important}
 
-/* BRAND */
+.hidden{
+  display:none!important;
+}
+
+/* ===== BRAND ===== */
 .brandHero{
   width:94%;
   max-width:1100px;
@@ -31,6 +35,7 @@ html,body{
   position:relative;
   overflow:hidden;
 }
+
 .brandHero:before{
   content:"";
   position:absolute;
@@ -39,10 +44,12 @@ html,body{
   transform:rotate(18deg);
   animation:shine 4s infinite linear;
 }
+
 @keyframes shine{
   0%{transform:translateX(-75%) rotate(18deg)}
   100%{transform:translateX(75%) rotate(18deg)}
 }
+
 .brandLogo{
   position:relative;
   z-index:1;
@@ -52,6 +59,7 @@ html,body{
   -webkit-background-clip:text;
   color:transparent;
 }
+
 .brandSub{
   position:relative;
   z-index:1;
@@ -60,6 +68,7 @@ html,body{
   font-weight:800;
   color:#7a2b57;
 }
+
 .brandMini{
   position:relative;
   z-index:1;
@@ -73,7 +82,7 @@ html,body{
   font-weight:900;
 }
 
-/* TOP */
+/* ===== TOP ===== */
 .userTop{
   position:sticky;
   top:0;
@@ -81,6 +90,7 @@ html,body{
   background:linear-gradient(135deg,#ffe0ef,#ffc9df);
   padding:10px 12px;
 }
+
 #search{
   width:100%;
   padding:13px;
@@ -89,13 +99,18 @@ html,body{
   outline:none;
   font-weight:800;
 }
+
 #filterTabs{
   display:flex;
   gap:8px;
   overflow-x:auto;
   padding:10px 0 2px;
 }
-#filterTabs::-webkit-scrollbar{display:none}
+
+#filterTabs::-webkit-scrollbar{
+  display:none;
+}
+
 #filterTabs button{
   flex:0 0 auto;
   border:0;
@@ -106,17 +121,19 @@ html,body{
   font-weight:900;
   box-shadow:0 8px 18px rgba(255,63,157,.22);
 }
+
 #filterTabs button.active{
   background:#1d9bf0;
 }
 
-/* LIST */
+/* ===== LIST ===== */
 #list{
   display:grid;
   grid-template-columns:repeat(2,1fr);
   gap:12px;
   padding:12px;
 }
+
 .card{
   background:white;
   border-radius:18px;
@@ -126,6 +143,11 @@ html,body{
   display:flex;
   flex-direction:column;
 }
+
+.card:active{
+  transform:scale(.98);
+}
+
 .thumb{
   position:relative;
   height:210px;
@@ -133,18 +155,21 @@ html,body{
   background:#ffe1ef;
   overflow:hidden;
 }
+
 .thumb img{
   width:100%;
   height:100%;
   object-fit:cover;
   display:block;
 }
+
 .body{
   height:85px;
   padding:10px;
   overflow:hidden;
   background:white;
 }
+
 .body b{
   display:block;
   font-size:14px;
@@ -152,12 +177,14 @@ html,body{
   max-height:34px;
   overflow:hidden;
 }
+
 .meta{
   display:flex;
   flex-wrap:wrap;
   gap:5px;
   margin-top:7px;
 }
+
 .meta span{
   background:white;
   border-radius:999px;
@@ -166,10 +193,11 @@ html,body{
   font-weight:800;
   box-shadow:0 4px 10px rgba(255,63,157,.15);
 }
+
 .badge{
   position:absolute;
-  top:9px;
-  right:9px;
+  top:12px;
+  right:12px;
   padding:6px 9px;
   border-radius:999px;
   color:white;
@@ -178,6 +206,7 @@ html,body{
   background:#ff3f9d;
   z-index:4;
 }
+
 .expiredBadge{
   position:absolute;
   inset:0;
@@ -190,22 +219,82 @@ html,body{
   letter-spacing:1px;
   z-index:3;
 }
+
+/* ===== LOVE FAVORIT PREMIUM ===== */
 .btnFav{
   position:absolute;
-  top:9px;
-  left:9px;
-  width:36px;
-  height:36px;
+  top:12px;
+  left:12px;
+  width:44px;
+  height:44px;
   border:0;
   border-radius:50%;
-  background:rgba(255,255,255,.85);
-  font-size:18px;
-  z-index:5;
+  background:rgba(255,255,255,.82);
+  color:#777;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:23px;
+  font-weight:900;
+  z-index:20;
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  box-shadow:
+    0 10px 25px rgba(0,0,0,.18),
+    inset 0 0 0 1px rgba(255,255,255,.85);
+  transition:.18s ease;
 }
+
+.btnFav:active{
+  transform:scale(.88);
+}
+
 .btnFav.active{
-  color:#ff2d55;
-  background:white;
+  background:linear-gradient(135deg,#ff2f92,#ff6bbd);
+  color:white;
+  box-shadow:
+    0 12px 28px rgba(255,47,146,.45),
+    0 0 0 5px rgba(255,47,146,.14);
 }
+
+.btnFav.lovePop{
+  animation:lovePop .35s ease;
+}
+
+.btnFav.active::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:50%;
+  border:2px solid rgba(255,47,146,.35);
+  animation:loveRing .55s ease forwards;
+  pointer-events:none;
+}
+
+.loveBurst{
+  position:absolute;
+  font-size:18px;
+  pointer-events:none;
+  animation:loveBurstUp .7s ease forwards;
+}
+
+@keyframes lovePop{
+  0%{transform:scale(.75)}
+  55%{transform:scale(1.25)}
+  100%{transform:scale(1)}
+}
+
+@keyframes loveRing{
+  0%{opacity:1;transform:scale(.75)}
+  100%{opacity:0;transform:scale(1.35)}
+}
+
+@keyframes loveBurstUp{
+  0%{opacity:1;transform:translateY(0) scale(.8)}
+  100%{opacity:0;transform:translateY(-38px) scale(1.6)}
+}
+
 .emptyBox{
   grid-column:1/-1;
   min-height:200px;
@@ -218,7 +307,7 @@ html,body{
   font-weight:900;
 }
 
-/* MODAL */
+/* ===== MODAL ===== */
 #modal{
   position:fixed;
   inset:0;
@@ -227,6 +316,7 @@ html,body{
   overflow:auto;
   padding:16px;
 }
+
 .modalBox{
   background:white;
   max-width:640px;
@@ -235,6 +325,7 @@ html,body{
   padding:18px;
   box-shadow:0 20px 50px rgba(0,0,0,.35);
 }
+
 .closeBtn{
   width:40px;
   height:40px;
@@ -245,18 +336,21 @@ html,body{
   font-size:20px;
   font-weight:900;
 }
+
 video{
   width:100%;
   margin-top:10px;
   border-radius:18px;
   background:#000;
 }
+
 .lockBox{
   background:#fff0f7;
   padding:14px;
   border-radius:18px;
   margin:10px 0;
 }
+
 .lockBox input,
 .commentInput{
   width:100%;
@@ -266,18 +360,21 @@ video{
   border-radius:14px;
   outline:none;
 }
+
 #tabs,.btns,.rate{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
   margin:12px 0;
 }
+
 button{
   border:0;
   border-radius:999px;
   padding:10px 14px;
   font-weight:900;
 }
+
 #tabs button,
 .btns button,
 .rate button,
@@ -285,11 +382,32 @@ button{
   background:#ff3f9d;
   color:white;
 }
-.likeActive{background:#ef4444!important;color:white!important}
-.unlikeActive{background:#6b7280!important;color:white!important}
-.likeNormal,.unlikeNormal{background:#e5e7eb!important;color:#333!important}
-#downloadBtn{background:#38bdf8!important;color:white!important}
 
+/* ===== LIKE / UNLIKE FINAL ===== */
+.likeActive{
+  background:#ef4444!important;
+  color:white!important;
+  box-shadow:0 10px 24px rgba(239,68,68,.35)!important;
+}
+
+.unlikeActive{
+  background:#6b7280!important;
+  color:white!important;
+  box-shadow:0 10px 24px rgba(107,114,128,.35)!important;
+}
+
+.likeNormal,
+.unlikeNormal{
+  background:#e5e7eb!important;
+  color:#333!important;
+}
+
+#downloadBtn{
+  background:#38bdf8!important;
+  color:white!important;
+}
+
+/* ===== COMMENT ===== */
 .comment{
   background:#fff5fb;
   border-left:4px solid #ff2e8a;
@@ -297,6 +415,7 @@ button{
   border-radius:12px;
   margin:8px 0;
 }
+
 .adminReplyShow{
   background:#ffe3f3;
   border-left:4px solid #2ea8ff;
@@ -304,6 +423,7 @@ button{
   border-radius:10px;
   margin-top:6px;
 }
+
 .verifyBadge{
   background:#2ea8ff;
   color:white;
@@ -314,7 +434,7 @@ button{
   font-weight:900;
 }
 
-/* WA */
+/* ===== WA BUTTON ===== */
 .waJoin{
   position:fixed;
   bottom:22px;
@@ -331,6 +451,7 @@ button{
   text-decoration:none;
   animation:goyang 2s infinite;
 }
+
 .waJoin:before{
   content:"";
   width:28px;
@@ -339,13 +460,14 @@ button{
   background-size:contain;
   filter:brightness(0) invert(1);
 }
+
 @keyframes goyang{
   0%{transform:translateY(0)}
   50%{transform:translateY(-6px)}
   100%{transform:translateY(0)}
 }
 
-/* TOAST */
+/* ===== TOAST ===== */
 .toast{
   position:fixed;
   bottom:25px;
@@ -363,6 +485,7 @@ button{
   z-index:99999;
   font-weight:900;
 }
+
 .toast.show{
   opacity:1;
   transform:translateX(-50%) translateY(0);
@@ -371,16 +494,27 @@ button{
 @media(max-width:420px){
   .brandLogo{font-size:28px}
   .brandSub{font-size:12px}
+
   #list{
     gap:10px;
     padding:10px;
   }
+
   .card{
     height:275px;
   }
+
   .thumb{
     height:195px;
     min-height:195px;
+  }
+
+  .btnFav{
+    width:40px;
+    height:40px;
+    font-size:21px;
+    top:10px;
+    left:10px;
   }
 }
 </style>
@@ -624,11 +758,39 @@ function toggleFav(id,e){
   id = String(id);
   var f = favs();
   var idx = f.indexOf(id);
+  var activeNow = false;
 
-  if(idx !== -1) f.splice(idx,1);
-  else f.push(id);
+  if(idx !== -1){
+    f.splice(idx,1);
+    activeNow = false;
+  }else{
+    f.push(id);
+    activeNow = true;
+  }
 
   localStorage.setItem("fav",JSON.stringify(f));
+
+  var btn = e ? e.target.closest(".btnFav") : null;
+
+  if(btn){
+    btn.classList.toggle("active",activeNow);
+    btn.innerHTML = activeNow ? "❤️" : "♡";
+
+    btn.classList.remove("lovePop");
+    void btn.offsetWidth;
+    btn.classList.add("lovePop");
+
+    if(activeNow){
+      var burst = document.createElement("span");
+      burst.className = "loveBurst";
+      burst.innerHTML = "❤️";
+      btn.appendChild(burst);
+      setTimeout(function(){
+        if(burst) burst.remove();
+      },700);
+    }
+  }
+
   render();
 }
 
@@ -732,11 +894,15 @@ function paintButtons(){
   var likeBtn = document.getElementById("likeBtn");
   var unlikeBtn = document.getElementById("unlikeBtn");
 
-  likeBtn.className = liked ? "likeActive" : "likeNormal";
-  unlikeBtn.className = unliked ? "unlikeActive" : "unlikeNormal";
+  if(likeBtn){
+    likeBtn.className = liked ? "likeActive" : "likeNormal";
+    likeBtn.innerHTML = liked ? "❤️ Liked" : "❤️ Like";
+  }
 
-  likeBtn.innerHTML = liked ? "❤️ Liked" : "❤️ Like";
-  unlikeBtn.innerHTML = unliked ? "👎 Unliked" : "👎 Unlike";
+  if(unlikeBtn){
+    unlikeBtn.className = unliked ? "unlikeActive" : "unlikeNormal";
+    unlikeBtn.innerHTML = unliked ? "👎 Unliked" : "👎 Unlike";
+  }
 }
 
 function refreshActiveFromData(){
@@ -753,7 +919,7 @@ function refreshActiveFromData(){
 function doLike(){
   if(!active) return;
 
-  apiPost("/api/posts/" + active.id + "/like",{}).then(function(r){
+  apiPost("/api/react-like/" + active.id,{}).then(function(r){
     if(!r.ok) return showToast(r.data.message || "Gagal like");
 
     active = r.data;
@@ -765,7 +931,7 @@ function doLike(){
 function doUnlike(){
   if(!active) return;
 
-  apiPost("/api/posts/" + active.id + "/dislike",{}).then(function(r){
+  apiPost("/api/react-unlike/" + active.id,{}).then(function(r){
     if(!r.ok) return showToast(r.data.message || "Gagal unlike");
 
     active = r.data;
@@ -806,14 +972,14 @@ function doDownload(){
   }
 
   apiPost("/api/posts/" + active.id + "/download",{}).then(function(){
-    var a = document.createElement("a");
-    a.href = file;
-    a.download = "";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    load();
-  });
+  var a = document.createElement("a");
+  a.href = file;
+  a.download = "";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  load();
+});
 }
 
 function sendComment(){
