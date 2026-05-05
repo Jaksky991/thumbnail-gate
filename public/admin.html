@@ -120,6 +120,8 @@ async function login(){
   localStorage.setItem("adminName",d.name);
   sessionStorage.setItem("admin_login",d.name);
   sessionStorage.setItem("adminName",d.name);
+  localStorage.setItem("role", d.role);
+  sessionStorage.setItem("role", d.role);
 
   show("Login berhasil");
 
