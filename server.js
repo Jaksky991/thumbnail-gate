@@ -620,6 +620,51 @@ app.get("/api/check-account-status/:name", (req, res) => {
     status: String(acc.status || "active").toLowerCase()
   });
 });
+app.post("/api/posts/:postId/comments/:i/like", (req, res) => {
+  const { posts, post } = findPost(req.params.postId);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const comment = post.comments?.[Number(req.params.i)];
+  if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
+
+  comment.likes = Number(comment.likes || 0) + 1;
+
+  writePosts(posts);
+  res.json({ ok: true, post });
+});
+
+app.post("/api/posts/:postId/comments/:i/report", (req, res) => {
+  const { posts, post } = findPost(req.params.postId);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const comment = post.comments?.[Number(req.params.i)];
+  if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
+
+  comment.reported = true;
+  comment.reports = Number(comment.reports || 0) + 1;
+
+  writePosts(posts);
+  res.json({ ok: true, post });
+});
+
+app.post("/api/posts/:postId/comments/:i/pin", (req, res) => {
+  const role = String(req.body.role || "").toLowerCase();
+
+  if (role !== "moderator") {
+    return res.status(403).json({ message: "Hanya moderator yang bisa pin" });
+  }
+
+  const { posts, post } = findPost(req.params.postId);
+  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
+
+  const comment = post.comments?.[Number(req.params.i)];
+  if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
+
+  comment.pinned = !comment.pinned;
+
+  writePosts(posts);
+  res.json({ ok: true, post });
+});
 // ===== LIKE / UNLIKE TOGGLE FINAL ANTI BARENG =====
 function getReactUid(req){
   return String(
