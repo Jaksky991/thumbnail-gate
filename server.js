@@ -627,26 +627,20 @@ app.post("/api/posts/:postId/comments/:i/like", (req, res) => {
   const comment = post.comments?.[Number(req.params.i)];
   if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
 
-  comment.likes = Number(comment.likes || 0) + 1;
+  const u = uid(req);
+  comment.likedBy = comment.likedBy || {};
+
+  if (comment.likedBy[u]) {
+    delete comment.likedBy[u]; // klik lagi = batal like
+  } else {
+    comment.likedBy[u] = true;
+  }
+
+  comment.likes = Object.keys(comment.likedBy).length;
 
   writePosts(posts);
   res.json({ ok: true, post });
 });
-
-app.post("/api/posts/:postId/comments/:i/report", (req, res) => {
-  const { posts, post } = findPost(req.params.postId);
-  if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
-
-  const comment = post.comments?.[Number(req.params.i)];
-  if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
-
-  comment.reported = true;
-  comment.reports = Number(comment.reports || 0) + 1;
-
-  writePosts(posts);
-  res.json({ ok: true, post });
-});
-
 app.post("/api/posts/:postId/comments/:i/pin", (req, res) => {
   const role = String(req.body.role || "").toLowerCase();
 
@@ -657,10 +651,19 @@ app.post("/api/posts/:postId/comments/:i/pin", (req, res) => {
   const { posts, post } = findPost(req.params.postId);
   if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
 
-  const comment = post.comments?.[Number(req.params.i)];
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+
+  const comment = post.comments[Number(req.params.i)];
   if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
 
   comment.pinned = !comment.pinned;
+
+  // 🔥 bikin pinned naik ke atas
+  post.comments.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
 
   writePosts(posts);
   res.json({ ok: true, post });
