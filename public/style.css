@@ -186,22 +186,24 @@ body{
 }
 
 #history .item{
-  display:grid!important;
-  grid-template-columns:145px 1fr!important;
-  gap:18px!important;
-  align-items:start!important;
-  background:#fff8fc!important;
-  border:1px solid #ffd3e7!important;
-  border-radius:22px!important;
-  padding:16px!important;
-  box-shadow:0 10px 25px rgba(255,63,157,.12)!important;
+  display:flex !important;
+  align-items:center !important;
+  gap:14px !important;
+  background:#fff8fc !important;
+  border:1px solid #ffd3e7 !important;
+  border-radius:22px !important;
+  padding:12px !important;
 }
 
 #history .item img{
-  width:145px!important;
-  height:155px!important;
-  object-fit:cover!important;
-  border-radius:16px!important;
+  width:90px !important;
+  height:90px !important;
+  object-fit:cover !important;
+  border-radius:14px !important;
+  flex-shrink:0;
+}
+  #history .item > div{
+  flex:1;
 }
 
 #history h3{
