@@ -866,6 +866,8 @@ function unlockNow(){
   });
 }
 
+localStorage.setItem("role","owner"); // ⬅️ TAMBAH DI SINI
+
 function setVideos(v){
   videos = v || [];
 
@@ -1055,10 +1057,9 @@ function renderComments(){
 + ' <small style="color:#888;">• '+ (active.title || "Video") +'</small>'
     + '<p>'+ (c.text || c.comment || "") +'</p>'
     + '<div class="comment-actions">'
-+ '<button onclick="likeComment('+i+')">👍</button>'
-+ '<button onclick="pinComment('+i+')">📌</button>'
-+ '<button onclick="deleteComment('+i+')">🗑️</button>'
-+ '</div>';
++ '<button type="button" onclick="likeComment('+i+')">👍</button>'
++ '<button type="button" onclick="pinComment('+i+')">📌</button>'
++ '<button type="button" onclick="deleteComment('+i+')">🗑️</button>'
 
     var replies = c.replies || [];
     replies.forEach(function(r){
@@ -1085,7 +1086,7 @@ function pinComment(i){
 }
 
 function deleteComment(i){
-  apiPost("/api/admin/delete-comment/"+active.id+"/"+i,{
+  apiPost("/api/admin/comment/"+active.id+"/"+i,{
     role: localStorage.getItem("role")
   }).then(()=>load());
 }
