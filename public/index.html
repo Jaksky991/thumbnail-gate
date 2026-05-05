@@ -1047,7 +1047,7 @@ function renderComments(){
   html += '<div class="comment">'
     + '<small style="color:#888;">📹 '+ (active.title || "Video") +'</small><br>'
     + '<b>'+ (c.name || "User") +'</b>'
-    + '<p>'+ (c.text || c.comment || "") +'</p>';
+    + '<p>'+ (c.text || c.comment || "") +'</p>'
     + '<div class="comment-actions">'
 + '<button onclick="likeComment('+i+')">👍</button>'
 + '<button onclick="reportComment('+i+')">🚫</button>'
@@ -1068,7 +1068,26 @@ function renderComments(){
 
   document.getElementById("comments").innerHTML = html;
 }
+function likeComment(i){
+  apiPost("/api/posts/"+active.id+"/comments/"+i+"/like",{})
+  .then(()=>load());
+}
 
+function reportComment(i){
+  apiPost("/api/posts/"+active.id+"/comments/"+i+"/report",{})
+  .then(()=>load());
+}
+
+function pinComment(i){
+  apiPost("/api/posts/"+active.id+"/comments/"+i+"/pin",{
+    role: localStorage.getItem("role")
+  }).then(()=>load());
+}
+
+function deleteComment(i){
+  apiPost("/api/admin/delete-comment/"+active.id+"/"+i,{})
+  .then(()=>load());
+}
 function closeModal(){
   var player = document.getElementById("player");
   document.getElementById("modal").classList.add("hidden");
