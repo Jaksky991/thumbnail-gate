@@ -1008,10 +1008,11 @@ function sendComment(){
   }
 
   apiPost("/api/posts/" + active.id + "/comment",{
-    name:name,
-    text:text,
-    userId:uid
-  }).then(function(r){
+  name:name,
+  text:text,
+  userId:uid,
+  role: localStorage.getItem("role") || "user"
+}).then(function(r){
     if(!r.ok){
       showToast(r.data.message || "Gagal komentar");
       return;
