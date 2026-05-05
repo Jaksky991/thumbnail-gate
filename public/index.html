@@ -1056,7 +1056,6 @@ function renderComments(){
     + '<p>'+ (c.text || c.comment || "") +'</p>'
     + '<div class="comment-actions">'
 + '<button onclick="likeComment('+i+')">👍</button>'
-+ '<button onclick="reportComment('+i+')">🚫</button>'
 + '<button onclick="pinComment('+i+')">📌</button>'
 + '<button onclick="deleteComment('+i+')">🗑️</button>'
 + '</div>';
@@ -1078,12 +1077,7 @@ function likeComment(i){
   apiPost("/api/posts/"+active.id+"/comments/"+i+"/like",{})
   .then(()=>load());
 }
-
-function reportComment(i){
-  apiPost("/api/posts/"+active.id+"/comments/"+i+"/report",{})
-  .then(()=>load());
-}
-
+  
 function pinComment(i){
   apiPost("/api/posts/"+active.id+"/comments/"+i+"/pin",{
     role: localStorage.getItem("role")
