@@ -1057,6 +1057,7 @@ function renderComments(){
 + ' <small style="color:#888;">• '+ (active.title || "Video") +'</small>'
     + '<p>'+ (c.text || c.comment || "") +'</p>'
     + '<div class="comment-actions">'
+    + '<button onclick="replyComment(\''+c.id+'\')">Balas</button>'
 
     var replies = c.replies || [];
     replies.forEach(function(r){
@@ -1071,6 +1072,16 @@ function renderComments(){
 
   document.getElementById("comments").innerHTML = html;
 }
+  function replyComment(id){
+  var text = prompt("Balas komentar:");
+  if(!text) return;
+
+  fetch("/api/admin/posts/"+active.id+"/comments/"+id+"/reply",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ text:text })
+  }).then(()=>load());
+  }
   
 function closeModal(){
   var player = document.getElementById("player");
