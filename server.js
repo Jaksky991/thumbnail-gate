@@ -785,4 +785,4 @@ post.comments = post.comments.filter(c => String(c.id) !== id);
 writePosts(posts);
 
 res.json({ ok: true, post });
-  
+});
