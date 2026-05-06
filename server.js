@@ -376,8 +376,8 @@ app.post("/api/admin/posts/:postId/comments/:i/reply", (req, res) => {
 
   if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
 
-  post.comments = Array.isArray(post.comments) ? post.comments : [];
-  const comment = post.comments[Number(req.params.i)];
+  const id = String(req.params.i);
+const comment = post.comments.find(c => String(c.id) === id);
 
   if (!comment) return res.status(404).json({ message: "Komentar tidak ditemukan" });
 
@@ -418,13 +418,14 @@ app.delete("/api/admin/comment/:postId/:i", (req, res) => {
   if (!post) return res.status(404).json({ message: "Post tidak ditemukan" });
 
   post.comments = Array.isArray(post.comments) ? post.comments : [];
-  const i = Number(req.params.i);
+  const id = String(req.params.i);
 
-  if (!post.comments[i]) {
-    return res.status(404).json({ message: "Komentar tidak ditemukan" });
-  }
+const exist = post.comments.find(c => String(c.id) === id);
+if (!exist) {
+  return res.status(404).json({ message: "Komentar tidak ditemukan" });
+}
 
-  post.comments.splice(i, 1);
+post.comments = post.comments.filter(c => String(c.id) !== id);
   writePosts(posts);
 
   res.json({ ok: true, post });
