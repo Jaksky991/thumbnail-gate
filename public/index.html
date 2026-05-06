@@ -1057,9 +1057,6 @@ function renderComments(){
 + ' <small style="color:#888;">• '+ (active.title || "Video") +'</small>'
     + '<p>'+ (c.text || c.comment || "") +'</p>'
     + '<div class="comment-actions">'
-+ '<button type="button" onclick="likeComment('+i+')">👍</button>'
-+ '<button type="button" onclick="pinComment('+i+')">📌</button>'
-+ '<button type="button" onclick="deleteComment(\''+c.id+'\')">🗑️</button>'
 
     var replies = c.replies || [];
     replies.forEach(function(r){
@@ -1073,26 +1070,6 @@ function renderComments(){
   });
 
   document.getElementById("comments").innerHTML = html;
-}
-  
-function likeComment(i){
-  fetch("/api/posts/"+active.id+"/comments/"+i+"/like",{
-    method:"POST"
-  }).then(()=>load());
-}
-
-function pinComment(i){
-  fetch("/api/posts/"+active.id+"/comments/"+i+"/pin",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({role:"owner"})
-  }).then(()=>load());
-}
-
-function deleteComment(i){
-  fetch("/api/admin/comment/"+active.id+"/"+i,{
-    method:"POST"
-  }).then(()=>load());
 }
   
 function closeModal(){
