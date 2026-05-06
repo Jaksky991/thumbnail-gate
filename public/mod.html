@@ -182,57 +182,51 @@ async function loadComments(){
           </div>
         `).join("")}
 
-        <button onclick="deleteComment('${p.id}',${i})">Hapus</button>
+        <button onclick="deleteComment('${p.id}', '${c.id}')">Hapus</button>
 
-        <input id="reply_${p.id}_${i}" placeholder="Balas komentar...">
-        <button onclick="replyComment('${p.id}',${i})">Reply</button>
-      </div>`;
-    });
-  });
+<input id="reply_${p.id}_${c.id}" ...>
+
+<button onclick="replyComment('${p.id}', '${c.id}')">Reply</button>
 
   document.getElementById("comments").innerHTML=html || "Belum ada komentar";
 }
 
-async function replyComment(postId,index){
-  const inp=document.getElementById("reply_"+postId+"_"+index);
+async function replyComment(postId,id){
+  const inp=document.getElementById("reply_"+postId+"_"+id);
   const reply=inp ? inp.value.trim() : "";
-
   if(!reply) return show("Isi dulu");
 
-  const r=await fetch("/api/admin/posts/"+postId+"/comments/"+index+"/reply",{
+  const r=await fetch("/api/admin/posts/"+postId+"/comments/"+id+"/reply",{
     method:"POST",
     headers:{
       "Content-Type":"application/json",
       "x-admin-name":sessionStorage.getItem("mod_login") || "Moderator"
     },
-    body:JSON.stringify({
-      text:reply,
-      adminName:sessionStorage.getItem("mod_login") || "Moderator",
-      role:"moderator"
-    })
+    body:JSON.stringify({text:reply})
   });
 
   const d=await r.json().catch(()=>({}));
-
   if(!r.ok) return show(d.message || "Gagal reply");
 
   inp.value="";
   show("Reply terkirim");
   loadComments();
-}
+             }
 
-async function deleteComment(postId,index){
-  const r=await fetch("/api/admin/comment/"+postId+"/"+index,{
+async function deleteComment(postId,id){
+  const r=await fetch("/api/admin/comment/"+postId+"/"+id,{
     method:"DELETE",
     headers:{
       "x-admin-name":sessionStorage.getItem("mod_login") || ""
     }
   });
 
-  if(!r.ok) return show("Gagal hapus");
+if(!r.ok){
+  return show("Gagal hapus");
+}
 
-  show("Dihapus");
-  loadComments();
+show("Dihapus");
+loadComments();
 }
 
 /* anti teks hilang pas ngetik */
